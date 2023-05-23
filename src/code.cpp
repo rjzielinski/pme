@@ -27,9 +27,20 @@ double norm_euclidean(arma::vec x) {
   return arma::norm(x, 2);
 }
 
-//' Compute the Euclidean Distance Between Vectors
+//' Compute the Euclidean Distance between Vectors
 //'
-//' C++ implementation of the Eu
+//' C++ implementation of Euclidean distance calculations for use in
+//' internal Rcpp functions.
+//'
+//' @param x, y Numeric vectors of values.
+//'
+//' @return A numeric value.
+//' @export
+//'
+//' @examples
+//' x <- 1:10
+//' y <- 91:100
+//' dist_euclidean(x, y)
 // [[Rcpp::export]]
 double dist_euclidean(arma::vec x, arma::vec y) {
   return norm_euclidean(x - y);

@@ -22,21 +22,22 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// norm_euclidean2
-double norm_euclidean2(arma::vec x);
-RcppExport SEXP _pme_norm_euclidean2(SEXP xSEXP) {
+// dist_euclidean
+double dist_euclidean(arma::vec x, arma::vec y);
+RcppExport SEXP _pme_dist_euclidean(SEXP xSEXP, SEXP ySEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
-    rcpp_result_gen = Rcpp::wrap(norm_euclidean2(x));
+    Rcpp::traits::input_parameter< arma::vec >::type y(ySEXP);
+    rcpp_result_gen = Rcpp::wrap(dist_euclidean(x, y));
     return rcpp_result_gen;
 END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
     {"_pme_norm_euclidean", (DL_FUNC) &_pme_norm_euclidean, 1},
-    {"_pme_norm_euclidean2", (DL_FUNC) &_pme_norm_euclidean2, 1},
+    {"_pme_dist_euclidean", (DL_FUNC) &_pme_dist_euclidean, 2},
     {NULL, NULL, 0}
 };
 

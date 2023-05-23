@@ -4,7 +4,7 @@
 #' Compute the Euclidean Norm of a Vector
 #'
 #' C++ implementation of the Euclidean norm calculations for a vector. This
-#' improves computation time, but may introduce numerical instability.
+#' is meant for internal use for the Rcpp implementation.
 #'
 #' @param x A numeric vector of values.
 #'
@@ -18,7 +18,21 @@ norm_euclidean <- function(x) {
     .Call(`_pme_norm_euclidean`, x)
 }
 
-norm_euclidean2 <- function(x) {
-    .Call(`_pme_norm_euclidean2`, x)
+#' Compute the Euclidean Distance between Vectors
+#'
+#' C++ implementation of Euclidean distance calculations for use in
+#' internal Rcpp functions.
+#'
+#' @param x, y Numeric vectors of values.
+#'
+#' @return A numeric value.
+#' @export
+#'
+#' @examples
+#' x <- 1:10
+#' y <- 91:100
+#' dist_euclidean(x, y)
+dist_euclidean <- function(x, y) {
+    .Call(`_pme_dist_euclidean`, x, y)
 }
 
