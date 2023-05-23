@@ -9,27 +9,28 @@ using namespace std;
 #include <cmath>
 #include <complex>
 
-//' RcppArmadillo Hello World
+//' Compute the Euclidean Norm of a Vector
 //'
-//' This is a simple example of creating two matrices and returning
-//' the result of an operation on them.
+//' C++ implementation of the Euclidean norm calculations for a vector. This
+//' is meant for internal use for the Rcpp implementation.
 //'
+//' @param x A numeric vector of values.
+//'
+//' @return A numeric value.
 //' @export
+//'
 //' @examples
-//' rcpparma_hello_world
-// [[Rcpp::export]]
-arma::mat rcpparma_hello_world() {
-  arma::mat m1 = arma::eye<arma::mat>(3, 3);
-  arma::mat m2 = arma::eye<arma::mat>(3, 3);
-
-  return m1 + 3 * (m1 + m2);
-}
-
+//' x <- 1:10
+//' norm_euclidean(x)
 // [[Rcpp::export]]
 double norm_euclidean(arma::vec x) {
-  double sq_sum = 0;
-  for (int i = 0; i < x.size(); i++) {
-    sq_sum += pow(x[i], 2);
-  }
-  return sqrt(sq_sum);
+  return arma::norm(x, 2);
+}
+
+//' Compute the Euclidean Distance Between Vectors
+//'
+//' C++ implementation of the Eu
+// [[Rcpp::export]]
+double dist_euclidean(arma::vec x, arma::vec y) {
+  return norm_euclidean(x - y);
 }
