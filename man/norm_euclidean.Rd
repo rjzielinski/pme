@@ -14,7 +14,7 @@ A numeric value.
 }
 \description{
 C++ implementation of the Euclidean norm calculations for a vector. This
-improves computation time, but may introduce numerical instability.
+is meant for internal use for the Rcpp implementation.
 }
 \examples{
 x <- 1:10

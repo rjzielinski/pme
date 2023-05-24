@@ -9,7 +9,6 @@
 #' @param x A numeric vector of values.
 #'
 #' @return A numeric value.
-#' @export
 #'
 #' @examples
 #' x <- 1:10
@@ -34,5 +33,67 @@ norm_euclidean <- function(x) {
 #' dist_euclidean(x, y)
 dist_euclidean <- function(x, y) {
     .Call(`_pme_dist_euclidean`, x, y)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param t Numeric vector of values.
+#' @param lambda Number of dimensions.
+#'
+#' @return A numeric value.
+eta_kernel <- function(t, lambda) {
+    .Call(`_pme_eta_kernel`, t, lambda)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param x Numeric matrix of values.
+#' @param lambda Number of dimensions.
+#'
+#' @return A numeric matrix.
+calcE <- function(x, lambda) {
+    .Call(`_pme_calcE`, x, lambda)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param t A numeric vector of values.
+#' @param tau A numeric matrix of values.
+#' @param lambda The number of dimensions.
+#'
+#' @return A numeric matrix.
+etaFunc <- function(t, tau, lambda) {
+    .Call(`_pme_etaFunc`, t, tau, lambda)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param df A numeric matrix.
+#' @param x A numeric matrix.
+#'
+#' @return A numeric vector.
+calc_nearest_x <- function(df, x) {
+    .Call(`_pme_calc_nearest_x`, df, x)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param df A numeric matrix.
+#' @param tnew A numeric matrix.
+#' @param vec A numeric vector.
+#'
+#' @return A numeric matrix.
+calc_init_param <- function(df, tnew, nearest_x) {
+    .Call(`_pme_calc_init_param`, df, tnew, nearest_x)
 }
 
