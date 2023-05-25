@@ -16,6 +16,17 @@ new_hdmde <- function(mu, sigma, theta) {
   vctrs::new_vctr(hdmde_list, class = "hdmde")
 }
 
+#' Check Whether an Object is of Type `hdmde`
+#'
+#' @param x An object to be checked.
+#'
+#' @return A logical value.
+#'
+#' @noRd
+is_hdmde <- function(x) {
+  inherits(x, "hdmde")
+}
+
 #' High-Dimensional Mixture Density Estimation
 #'
 #' Data reduction approach to estimate a high-dimensional dataset using a
