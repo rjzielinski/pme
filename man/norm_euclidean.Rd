@@ -16,7 +16,3 @@ A numeric value.
 C++ implementation of the Euclidean norm calculations for a vector. This
 is meant for internal use for the Rcpp implementation.
 }
-\examples{
-x <- 1:10
-norm_euclidean(x)
-}

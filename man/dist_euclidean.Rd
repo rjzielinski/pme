@@ -7,7 +7,9 @@
 dist_euclidean(x, y)
 }
 \arguments{
-\item{x, }{y Numeric vectors of values.}
+\item{x}{Numeric vector of values.}
+
+\item{y}{Numeric vector of values.}
 }
 \value{
 A numeric value.

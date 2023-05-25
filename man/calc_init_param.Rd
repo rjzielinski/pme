@@ -11,7 +11,7 @@ calc_init_param(df, tnew, nearest_x)
 
 \item{tnew}{A numeric matrix.}
 
-\item{vec}{A numeric vector.}
+\item{nearest_x}{A numeric vector.}
 }
 \value{
 A numeric matrix.
