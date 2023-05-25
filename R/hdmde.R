@@ -11,7 +11,7 @@ new_hdmde <- function(mu, sigma, theta) {
   hdmde_list <- list(
     mu = mu,
     sigma = sigma,
-    theta_hat = theta_hat
+    theta_hat = theta
   )
   vctrs::new_vctr(hdmde_list, class = "hdmde")
 }
@@ -40,17 +40,15 @@ is_hdmde <- function(x) {
 #'
 #' @return An object of type hdmde
 #' @export
-#'
-#' @examples
 hdmde <- function(x_obs, N0, alpha, max_comp) {
   # Initialization ----------------------------
-  zalpha <- qnorm(1 - (alpha / 2))
+  zalpha <- stats::qnorm(1 - (alpha / 2))
   n <- nrow(x_obs)
   D <- ncol(x_obs)
   N <- N0
 
   component_estimates <- compute_estimates(x_obs, N)
-  p_old <- map(
+  p_old <- purrr::map(
     1:n,
     ~ f_test(
       x_obs[.x, ],
@@ -65,7 +63,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   while ((test_rejection == FALSE) & (N <= min(n, max_comp))) {
     N <- N + 1
     components_new <- compute_estimates(x_obs, N)
-    p_new <- map(
+    p_new <- purrr::map(
       1:n,
       ~ f_test(
         x_obs[.x, ],
@@ -83,7 +81,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     p_old <- p_new
   }
 
-
+  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat)
 }
 
 
@@ -94,18 +92,18 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 #'
 #' For a given value of N, estimate the mixture component centers, variance, and weights.
 #'
-#' @param x_obs A numeric matrix.
-#' @param N The number of mixture components to be estimated.
+#' @param x A numeric matrix.
+#' @param n The number of mixture components to be estimated.
 #'
 #' @return A list containing the mixture centers, variance, and weights.
 #'
 #' @noRd
-compute_estimates <- function(x_obs, N) {
+compute_estimates <- function(x, n) {
   # increasing iter.max helps to avoid poor fit in high dimensional situations.
-  km <- kmeans(x_obs, N, iter.max = 10000, nstart = 100)
+  km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100)
   mu <- km$centers
   sigma_est <- estimate_sigma(km)
-  theta_hat <- weight_seq(x_obs, mu, sigma_est)
+  theta_hat <- calc_weights(x, mu, sigma_est)
 
   list(
     mu = mu,
@@ -116,18 +114,19 @@ compute_estimates <- function(x_obs, N) {
 
 #' Estimate Mixture Component Variance
 #'
+#' @param x A numeric matrix containing the dataset.
 #' @param km A k-means object including the estimated mixture components.
 #'
 #' @return A numeric estimate of the variance of the mixture components.
 #'
 #' @noRd
-estimate_sigma <- function(km) {
+estimate_sigma <- function(x, km) {
   N <- nrow(km$centers)
   sigma_vec <- rep(NA, N)
   for (j in 1:N) {
     index_temp <- which(km$cluster == j)
-    x_temp <- x_obs[index_temp, ]
-    s <- map(
+    x_temp <- x[index_temp, ]
+    s <- purrr::map(
       1:nrow(x_temp),
       ~ dist_euclidean(x_temp[.x, ], mu[j, ])^2
     ) %>%
@@ -163,7 +162,7 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
   while ((abs_diff > epsilon) & (count <= max_iter)) {
     W <- t(t(A) * theta_old)
     w <- Rfast::colsums(W / Rfast::rowsums(W))
-    lambda_hat <- nlm(f_lambda, lambda_hat_old, iterlim = 1000)$estimate
+    lambda_hat <- stats::nlm(f_lambda, lambda_hat_old, iterlim = 1000)$estimate
     theta_new <- w / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
 
     abs_diff <- dist_euclidean(theta_new, theta_old)
@@ -188,8 +187,8 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
 #'
 #' @noRd
 f_test <- function(x, mu, sigma, theta_hat) {
-  comp_vec <- map(
-    1:N,
+  comp_vec <- purrr::map(
+    1:nrow(mu),
     ~ smoothing_kernel(x, mu[.x, ], sigma)
   ) %>%
     unlist()
@@ -214,9 +213,9 @@ calc_A <- function(x_obs, mu, sigma) {
 
   A <- matrix(NA, nrow = n, ncol = N)
   for (j in 1:N) {
-    A[, j] <- map(
+    A[, j] <- purrr::map(
       1:n,
-      ~ ker(x_obs[.x, ], mu[j, ], sigma)
+      ~ smoothing_kernel(x_obs[.x, ], mu[j, ], sigma)
     ) %>%
       unlist()
   }
@@ -225,6 +224,7 @@ calc_A <- function(x_obs, mu, sigma) {
 
 #' Minimization Function for Rho Estimates
 #'
+#' @param x A numeric matrix of the unreduced dataset.
 #' @param mu A numeric matrix of component centers.
 #' @param w A numeric weight value.
 #' @param lambda A given numeric vector.
@@ -232,13 +232,13 @@ calc_A <- function(x_obs, mu, sigma) {
 #' @return A numeric value.
 #'
 #' @noRd
-f_lambda <- function(mu, w, lambda) {
+f_lambda <- function(x, mu, w, lambda) {
   temp_denom <- Rfast::rowsums(t(t(cbind(rep(1, dim(mu)[1])) * lambda)))
   temp_num <- mu * w
 
   f1 <- sum(w / temp_denom)
   f2 <- Rfast::colsums(temp_num / temp_denom)
-  dist_euclidean(f1, 1) + dist_euclidean(f2, Rfast::colmeans(x_obs))
+  dist_euclidean(f1, 1) + dist_euclidean(f2, Rfast::colmeans(x))
 }
 
 #' Bound Vector Values Between 0 and 1

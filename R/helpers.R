@@ -10,6 +10,6 @@
 #' @export
 #'
 smoothing_kernel <- function(x, mu, sigma) {
-  yseq <- dnorm((x - mu) / sigma)
+  yseq <- stats::dnorm((x - mu) / sigma)
   return((sigma^(-length(x))) * prod(yseq))
 }
