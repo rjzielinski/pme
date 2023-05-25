@@ -12,8 +12,11 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Imports: 
+    magrittr,
+    purrr,
     Rcpp,
     Rfast,
+    stats,
     vctrs
 Suggests: 
     testthat (>= 3.0.0)
