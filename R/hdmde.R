@@ -1,3 +1,21 @@
+#' Create New HDMDE Object
+#'
+#' @param mu A numeric matrix containing the density component centers.
+#' @param sigma A numeric value describing the cluster variance.
+#' @param theta A numeric vector of weight values.
+#'
+#' @return An object of type hdmde.
+#'
+#' @noRd
+new_hdmde <- function(mu, sigma, theta) {
+  hdmde_list <- list(
+    mu = mu,
+    sigma = sigma,
+    theta_hat = theta_hat
+  )
+  vctrs::new_vctr(hdmde_list, class = "hdmde")
+}
+
 #' High-Dimensional Mixture Density Estimation
 #'
 #' Data reduction approach to estimate a high-dimensional dataset using a
@@ -21,6 +39,40 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   N <- N0
 
   component_estimates <- compute_estimates(x_obs, N)
+  p_old <- map(
+    1:n,
+    ~ f_test(
+      x_obs[.x, ],
+      component_estimates$mu,
+      component_estimates$sigma,
+      component_estimates$theta_hat
+    )
+  )
+
+  test_rejection <- FALSE
+
+  while ((test_rejection == FALSE) & (N <= min(n, max_comp))) {
+    N <- N + 1
+    components_new <- compute_estimates(x_obs, N)
+    p_new <- map(
+      1:n,
+      ~ f_test(
+        x_obs[.x, ],
+        components_new$mu,
+        components_new$sigma,
+        components_new$theta_hat
+      )
+    )
+    difference <- p_new - p_old
+    sigma_hat_sq <- mean((difference - mean(difference))^2)
+    Z_I_N <- sqrt(n) * mean(difference) / sqrt(sigma_hat_sq)
+    if (!is.na(Z_I_N) & (abs(Z_I_N) <= zalpha)) {
+      test_rejection <- TRUE
+    }
+    p_old <- p_new
+  }
+
+
 }
 
 
@@ -121,11 +173,16 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
 #'
 #' @param x
 #'
-#' @return
+#' @return A numeric value
 #'
 #' @noRd
-f_test <- function(x) {
-
+f_test <- function(x, mu, sigma, theta_hat) {
+  comp_vec <- map(
+    1:N,
+    ~ smoothing_kernel(x, mu[.x, ], sigma)
+  ) %>%
+    unlist()
+  sum(theta_hat * comp_vec)
 }
 
 
