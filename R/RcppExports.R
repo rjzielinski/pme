@@ -9,10 +9,6 @@
 #' @param x A numeric vector of values.
 #'
 #' @return A numeric value.
-#'
-#' @examples
-#' x <- 1:10
-#' norm_euclidean(x)
 norm_euclidean <- function(x) {
     .Call(`_pme_norm_euclidean`, x)
 }
@@ -22,7 +18,8 @@ norm_euclidean <- function(x) {
 #' C++ implementation of Euclidean distance calculations for use in
 #' internal Rcpp functions.
 #'
-#' @param x, y Numeric vectors of values.
+#' @param x Numeric vector of values.
+#' @param y Numeric vector of values.
 #'
 #' @return A numeric value.
 #' @export
@@ -90,7 +87,7 @@ calc_nearest_x <- function(df, x) {
 #'
 #' @param df A numeric matrix.
 #' @param tnew A numeric matrix.
-#' @param vec A numeric vector.
+#' @param nearest_x A numeric vector.
 #'
 #' @return A numeric matrix.
 calc_init_param <- function(df, tnew, nearest_x) {

@@ -17,10 +17,6 @@ using namespace std;
 //' @param x A numeric vector of values.
 //'
 //' @return A numeric value.
-//'
-//' @examples
-//' x <- 1:10
-//' norm_euclidean(x)
 // [[Rcpp::export]]
 double norm_euclidean(arma::vec x) {
   return arma::norm(x, 2);
@@ -31,7 +27,8 @@ double norm_euclidean(arma::vec x) {
 //' C++ implementation of Euclidean distance calculations for use in
 //' internal Rcpp functions.
 //'
-//' @param x, y Numeric vectors of values.
+//' @param x Numeric vector of values.
+//' @param y Numeric vector of values.
 //'
 //' @return A numeric value.
 //' @export
@@ -81,7 +78,6 @@ double eta_kernel(arma::vec t, int lambda) {
 // [[Rcpp::export]]
 arma::mat calcE(arma::mat x, int lambda) {
   int nrow = x.n_rows;
-  int ncol = x.n_cols;
   arma::mat E(nrow, nrow);
 
   for (int i = 0; i < nrow; i++) {
@@ -103,9 +99,7 @@ arma::mat calcE(arma::mat x, int lambda) {
 //' @return A numeric matrix.
 // [[Rcpp::export]]
 arma::mat etaFunc(arma::vec t, arma::mat tau, int lambda) {
-  int ncol = tau.n_cols;
   int nrow = tau.n_rows;
-  int vec_length = t.n_elem;
 
   arma::mat eta(nrow, 1);
 
@@ -143,7 +137,7 @@ arma::vec calc_nearest_x(arma::mat df, arma::mat x) {
 //'
 //' @param df A numeric matrix.
 //' @param tnew A numeric matrix.
-//' @param vec A numeric vector.
+//' @param nearest_x A numeric vector.
 //'
 //' @return A numeric matrix.
 // [[Rcpp::export]]
