@@ -94,7 +94,7 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
     }
 
     if (print_plots == TRUE) {
-      plot_pme(fnew, x_obs, X, sol, tnew, I, d, lambda)
+      plot_pme(fnew, x_obs, X, sol, tnew, d)
     }
 
     MSE_seq[tuning_ind] <- calc_msd(x_obs, initialization$km, fnew, tnew, D, d)
@@ -141,6 +141,31 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
   )
 }
 
+#' Create New PME Object
+#'
+#' @param embedding_map A function mapping from low-dimensional to
+#' high-dimensional space.
+#' @param knots A numeric matrix of mixture components.
+#' @param knot_weights A numeric vector of the weights associated with
+#' each mixture component.
+#' @param kernel_coefs A numeric matrix of the coefficients in the first
+#' part of a spline function.
+#' @param poly_coefs A numeric matrix of the coefficients in the second
+#' part of a spline function.
+#' @param tuning A numeric value describing the smoothing parameter.
+#' @param MSD A numeric vector of the mean squared distances associated with
+#' the estimated embedding maps for each smoothing value.
+#' @param coefs A list of the estimated spline coefficients of the embedding
+#' maps for each smoothing value.
+#' @param params A list of the estimated parameterizations of the mixture
+#' components for each smoothing value.
+#' @param tuning_vec A numeric vector of smoothing values.
+#' @param embeddings A list of the embedding maps estimated at each smoothing
+#' value.
+#'
+#' @return An object of type PME.
+#'
+#' @noRd
 new_pme <- function(embedding_map,
                     knots,
                     knot_weights,
@@ -184,6 +209,17 @@ is_pme <- function(x) {
   inherits(x, "pme")
 }
 
+#' Create PME Initialization
+#'
+#' @param x A numeric matrix of data.
+#' @param d The intrinsic dimension.
+#' @param N0 The minimum number of mixture components.
+#' @param alpha Significance level.
+#' @param max_comp Maximum number of components.
+#'
+#' @return A list used to initialize PME.
+#'
+#' @noRd
 initialize_pme <- function(x, d, N0, alpha, max_comp) {
   est <- hdmde(x, N0, alpha, max_comp)
   est_order <- order(est$mu[, 1])
@@ -278,7 +314,17 @@ print_SSD <- function(w, tuning_val, SSD_new, SSD_ratio, count) {
   )
 }
 
-plot_pme <- function(f, x, centers, sol, t, I, d, lambda) {
+#' Plot a PME Object
+#'
+#' @param f A function of the embedding map.
+#' @param x A numeric matrix of the unreduced data.
+#' @param centers A numeric matrix of the mixture component centers.
+#' @param sol A numeric matrix of the embedding map coefficients.
+#' @param t A numeric matrix of the parameterization of the component centers.
+#' @param d The intrinsic dimension.
+#'
+#' @noRd
+plot_pme <- function(f, x, centers, sol, t, d) {
   # pred_grid <- calc_tnew(centers, t, sol, I, d, lambda)
   pred_grid <- calc_tnew(f, centers, t)
   r_bounds <- Rfast::colMinsMaxs(pred_grid)
@@ -339,6 +385,19 @@ plot_pme <- function(f, x, centers, sol, t, I, d, lambda) {
   }
 }
 
+#' Calculate Mean Squared Distance
+#'
+#' @param x A numeric matrix of data
+#' @param km A kmeans object describing reduced data.
+#' @param f An embedding map.
+#' @param t A numeric matrix of parameterizations for the mixture components
+#' described in `km`.
+#' @param D The dimension of the original dataset.
+#' @param d The intrinsic dimension.
+#'
+#' @return A numeric value.
+#'
+#' @noRd
 calc_msd <- function(x, km, f, t, D, d) {
   data_initial <- matrix(0, nrow = 1, ncol = D + d)
   for (i in 1:max(km$cluster)) {
