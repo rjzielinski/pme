@@ -12,12 +12,16 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Imports: 
+    ggplot2,
     magrittr,
+    MASS,
+    plotly,
     purrr,
     Rcpp,
     Rfast,
     stats,
-    vctrs
+    vctrs,
+    vegan
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
