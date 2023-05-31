@@ -213,10 +213,9 @@ initialize_pme <- function(x, d, N0, alpha, max_comp) {
 #' @param W Numeric matrix of cluster weights.
 #' @param w smoothing parameter.
 #'
-#' @return
-#' @export
+#' @return A matrix of spline coefficients.
 #'
-#' @examples
+#' @noRd
 calc_coefficients <- function(X, t, W, w) {
   t_val <- cbind(rep(1, nrow(t)), t)
   E <- calcE(t, 4 - ncol(t))
