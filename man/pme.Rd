@@ -9,14 +9,14 @@ pme(
   d,
   initialization = NULL,
   N0 = 20 * D,
-  tuning.para.seq = exp(-15:5),
+  tuning_para_seq = exp(-15:5),
   alpha = 0.05,
-  max.comp = 100,
+  max_comp = 100,
   epsilon = 0.05,
-  max.iter = 100,
+  max_iter = 100,
   SSD_ratio_threshold = 10,
   print_plots = FALSE,
-  verbose = TRUE
+  verbose = FALSE
 )
 }
 \arguments{
@@ -28,15 +28,15 @@ pme(
 
 \item{N0}{Value}
 
-\item{tuning.para.seq}{Value}
+\item{tuning_para_seq}{Value}
 
 \item{alpha}{Value}
 
-\item{max.comp}{Value}
+\item{max_comp}{Value}
 
 \item{epsilon}{Value}
 
-\item{max.iter}{Value}
+\item{max_iter}{Value}
 
 \item{SSD_ratio_threshold}{Value}
 

@@ -3,15 +3,17 @@
 #' @param mu A numeric matrix containing the density component centers.
 #' @param sigma A numeric value describing the cluster variance.
 #' @param theta A numeric vector of weight values.
+#' @param km An object output from the `kmeans()` function.
 #'
 #' @return An object of type hdmde.
 #'
 #' @noRd
-new_hdmde <- function(mu, sigma, theta) {
+new_hdmde <- function(mu, sigma, theta, km) {
   hdmde_list <- list(
     mu = mu,
     sigma = sigma,
-    theta_hat = theta
+    theta_hat = theta,
+    km = km
   )
   vctrs::new_vctr(hdmde_list, class = "hdmde")
 }
@@ -56,7 +58,8 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
       component_estimates$sigma,
       component_estimates$theta_hat
     )
-  )
+  ) %>%
+    unlist()
 
   test_rejection <- FALSE
 
@@ -71,7 +74,8 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
         components_new$sigma,
         components_new$theta_hat
       )
-    )
+    ) %>%
+      unlist()
     difference <- p_new - p_old
     sigma_hat_sq <- mean((difference - mean(difference))^2)
     Z_I_N <- sqrt(n) * mean(difference) / sqrt(sigma_hat_sq)
@@ -81,7 +85,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     p_old <- p_new
   }
 
-  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat)
+  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
 }
 
 
@@ -102,13 +106,14 @@ compute_estimates <- function(x, n) {
   # increasing iter.max helps to avoid poor fit in high dimensional situations.
   km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100)
   mu <- km$centers
-  sigma_est <- estimate_sigma(km)
+  sigma_est <- estimate_sigma(x, km)
   theta_hat <- calc_weights(x, mu, sigma_est)
 
   list(
     mu = mu,
     sigma = sigma_est,
-    theta_hat = theta_hat
+    theta_hat = theta_hat,
+    km = km
   )
 }
 
@@ -128,7 +133,7 @@ estimate_sigma <- function(x, km) {
     x_temp <- x[index_temp, ]
     s <- purrr::map(
       1:nrow(x_temp),
-      ~ dist_euclidean(x_temp[.x, ], mu[j, ])^2
+      ~ dist_euclidean(x_temp[.x, ], km$centers[j, ])^2
     ) %>%
       unlist()
     sigma_vec[j] <- mean(s)
@@ -162,7 +167,14 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
   while ((abs_diff > epsilon) & (count <= max_iter)) {
     W <- t(t(A) * theta_old)
     w <- Rfast::colsums(W / Rfast::rowsums(W))
-    lambda_hat <- stats::nlm(f_lambda, lambda_hat_old, iterlim = 1000)$estimate
+    lambda_hat <- stats::nlm(
+      f = f_lambda,
+      p = lambda_hat_old,
+      x = x_obs,
+      mu = mu,
+      w = w,
+      iterlim = 1000
+    )$estimate
     theta_new <- w / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
 
     abs_diff <- dist_euclidean(theta_new, theta_old)
@@ -233,7 +245,7 @@ calc_A <- function(x_obs, mu, sigma) {
 #'
 #' @noRd
 f_lambda <- function(x, mu, w, lambda) {
-  temp_denom <- Rfast::rowsums(t(t(cbind(rep(1, dim(mu)[1])) * lambda)))
+  temp_denom <- Rfast::rowsums(t(t(cbind(rep(1, dim(mu)[1]), mu)) * lambda))
   temp_num <- mu * w
 
   f1 <- sum(w / temp_denom)
