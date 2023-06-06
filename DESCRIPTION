@@ -15,6 +15,7 @@ Imports:
     ggplot2,
     magrittr,
     MASS,
+    nloptr,
     plotly,
     purrr,
     Rcpp,
