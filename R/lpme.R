@@ -1,3 +1,20 @@
+#' Create New LPME Object
+#'
+#' @param msd Vector of Mean Squared Distance Values.
+#' @param sol_coef A value.
+#' @param times A value.
+#' @param r_init A value.
+#' @param r_fit A value.
+#' @param d A value.
+#' @param D A value.
+#' @param n_knots A value.
+#' @param lambda A value.
+#' @param gamma A value.
+#' @param sol_coef_list A value.
+#' @param r_fit_list A value.
+#'
+#' @return An object with class "lpme".
+#' @export
 new_lpme <- function(msd,
                      sol_coef,
                      times,
@@ -27,6 +44,12 @@ new_lpme <- function(msd,
   vctrs::new_vctr(lpme_list, class = "lpme")
 }
 
+#' Check Whether Object is of Type LPME
+#'
+#' @param x An object to test.
+#'
+#' @return A logical value.
+#' @export
 is_lpme <- function(x) {
   inherits(x, "lpme")
 }
@@ -104,8 +127,9 @@ lpme <- function(df,
       c(t[1], return_vec)
     }
 
-    f0_new <- f_new
+    f0_new <- f_new # is this necessary?
 
+    # beginning of update_parameterization()
     full_t <- tidyr::expand_grid(time_points, t_initial) %>%
       as.matrix(ncol = d + 1)
 
@@ -121,9 +145,9 @@ lpme <- function(df,
       ~ f_new(full_t[.x, ])
     ) %>%
       purrr::reduce(rbind)
+    # end of update_parameterization()
 
-    X_projection_index <- cbind(x_fun, full_t)
-
+    # calc_SSD() function - is this necessary without further iteration?
     SSD_new <- purrr::map(
       1:I_new,
       ~ dist_euclidean(
@@ -138,13 +162,17 @@ lpme <- function(df,
       plot_lpme(df, f_new, t_initial, d_new, D_new, time_points)
     }
 
+    # Cross-validation section
     nearest_x <- calc_nearest_x(df, x_test)
     init_param <- calc_init_param(df, t_new2, nearest_x)
 
     data_initial <- cbind(df, init_param)
 
     cv_mse <- vector()
+    # leave-one-out cross-validation
+    # provide options for other types?
     for (time_idx in 1:length(time_points)) {
+      # create parameter matrix
       r_bounds <- Rfast::colMinsMaxs(t_new2[, -1])
       r_list <- list()
       for (idx in 1:dim(r_bounds)[2]) {
@@ -211,7 +239,6 @@ lpme <- function(df,
 
       f_coef_cv <- function(t) {
         return_vec <- as.vector(
-          # t(sol_coef[1:nrow(coef_full), ]) %*% etaFunc(t, t_new, gamma) +
           t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
             t(sol_coef[(nrow(coef_cv) + 1):(nrow(coef_cv) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
         )
