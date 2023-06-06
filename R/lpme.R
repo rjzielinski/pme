@@ -40,7 +40,6 @@ lpme <- function(df,
                  max_iter = 100,
                  verbose = TRUE,
                  print_plots = TRUE,
-                 SSD_ratio_threshold = 100,
                  increase_threshold = 1.05,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
@@ -138,9 +137,6 @@ lpme <- function(df,
     if (print_plots == TRUE) {
       plot_lpme(df, f_new, t_initial, d_new, D_new, time_points)
     }
-
-    count <- 1
-    SSD_ratio <- 10 * epsilon
 
     nearest_x <- calc_nearest_x(df, x_test)
     init_param <- calc_init_param(df, t_new2, nearest_x)
