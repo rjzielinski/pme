@@ -21,6 +21,7 @@ Imports:
     Rcpp,
     Rfast,
     stats,
+    tidyr,
     vctrs,
     vegan
 Suggests: 
