@@ -126,14 +126,14 @@ compute_estimates <- function(x, n) {
 #'
 #' @noRd
 estimate_sigma <- function(x, km) {
-  N <- nrow(km$centers)
-  sigma_vec <- rep(NA, N)
-  for (j in 1:N) {
-    index_temp <- which(km$cluster == j)
-    x_temp <- x[index_temp, ]
+  clusters <- unique(km$cluster)
+  sigma_vec <- rep(NA, length(clusters))
+  for (j in 1:length(clusters)) {
+    index_temp <- which(km$cluster == clusters[j])
+    x_temp <- matrix(x[index_temp, ], nrow = length(index_temp))
     s <- purrr::map(
       1:nrow(x_temp),
-      ~ dist_euclidean(x_temp[.x, ], km$centers[j, ])^2
+      ~ dist_euclidean(x_temp[.x, ], km$centers[clusters[j], ])^2
     ) %>%
       unlist()
     sigma_vec[j] <- mean(s)
