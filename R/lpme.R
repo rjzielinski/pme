@@ -118,23 +118,6 @@ lpme <- function(df,
       purrr::reduce(cbind) %>%
       t()
 
-    # X_initial_guess <- cbind(X_new, full_t)
-    # projection.index.f0 <- function(x.init) {
-    #   projection_lpme(
-    #     x.init[1:D_new2],
-    #     f0_new,
-    #     x.init[(D_new2 + 1):(D_new2 + d_new + 1)],
-    #     n_knots,
-    #     d_new,
-    #     gamma
-    #   )
-    # }
-
-    # t_new2 <- matrix(
-    #   t(apply(X_initial_guess, 1, projection.index.f0)),
-    #   nrow = I_new
-    # )
-
     x_fun <- purrr::map(
       1:I_new,
       ~ f_new(full_t[.x, ])
