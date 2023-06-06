@@ -97,7 +97,7 @@ projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
       p = initial_guess[-1]
     )
   )
-  if (class(nlm_est) == "try-error") {
+  if (inherits(nlm_est, "try-error")) {
     opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-07)
     nlopt_est <- try(
       nloptr::nloptr(
@@ -106,7 +106,7 @@ projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
         opts = opts
       )
     )
-    if (class(nlopt_est) == "try-error") {
+    if (inherits(nlopt_est, "try-error")) {
       return(NULL)
     } else {
       return(c(initial_guess[1], nlopt_est$solution))
