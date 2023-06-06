@@ -48,7 +48,7 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
   W <- diag(theta_hat)
   X <- centers
   I <- length(theta_hat)
-  t_initial <- initial_parameterization$points
+  t_initial <- initial_parameterization
 
   # Fitting
   for (tuning_ind in 1:length(tuning_para_seq)) {
@@ -73,7 +73,7 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
       f0 <- fnew
       t_old <- tnew
 
-      sol <- calc_coefficients(X, t_initial, W, w)
+      sol <- calc_coefficients(X, tnew, W, w)
 
       fnew <- function(t) {
         as.vector(
@@ -234,7 +234,7 @@ initialize_pme <- function(x, d, N0, alpha, max_comp) {
   init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = 10)
 
   list(
-    parameterization = init_parameterization,
+    parameterization = init_parameterization$points,
     theta_hat = theta_hat,
     centers = centers,
     sigma = sigma,
