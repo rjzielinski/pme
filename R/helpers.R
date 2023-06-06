@@ -54,6 +54,28 @@ solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
   sol
 }
 
+#' Solve for Smoothing Spline Coefficients
+#'
+#' @param E A matrix of values.
+#' @param t_val A numeric matrix of input values.
+#' @param X A numeric matrix of outputs.
+#' @param w The smoothing parameter.
+#' @param d The dimension of the input.
+#' @param D The dimension of the output.
+#'
+#' @return A numeric matrix of coefficients.
+#'
+#' @noRd
+solve_spline <- function(E, t_val, X, w, d, D) {
+  M1 <- cbind(E + (w * diag(rep(1, nrow(t_val)))), t_val)
+  M2 <- cbind(t(t_val), matrix(0, ncol = d + 1, nrow = d + 1))
+  M <- rbind(M1, M2)
+  b <- rbind(X, matrix(0, nrow = d + 1, ncol = D))
+  sol <- MASS::ginv(M) %*% b
+  sol
+}
+
+
 #' Project onto Low-Dimensional Manifold
 #'
 #' @param x A data point in high-dimensional space.
@@ -66,4 +88,30 @@ solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
 projection_pme <- function(x, f, initial_guess) {
   est <- stats::nlm(function(t) dist_euclidean(x = x, f(t)), p = initial_guess)
   est$estimate
+}
+
+projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
+  nlm_est <- try(
+    stats::nlm(
+      function(t) dist_euclidean(x = x, f(matrix(c(initial_guess[1], t), nrow = 1))),
+      p = initial_guess[-1]
+    )
+  )
+  if (class(nlm_est) == "try-error") {
+    opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-07)
+    nlopt_est <- try(
+      nloptr::nloptr(
+        x0 = initial_guess[-1],
+        function(t) dist_euclidean(x = x, f(c(initial_guess[1], t))),
+        opts = opts
+      )
+    )
+    if (class(nlopt_est) == "try-error") {
+      return(NULL)
+    } else {
+      return(c(initial_guess[1], nlopt_est$solution))
+    }
+  } else {
+    return(c(initial_guess[1], nlm_est$estimate))
+  }
 }
