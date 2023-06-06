@@ -104,8 +104,8 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
     if (tuning_ind >= 4) {
       if (
         (MSE_seq[tuning_ind] > MSE_seq[tuning_ind - 1]) &&
-        (MSE_seq[tuning_ind - 1] > MSE_seq[tuning_ind - 2]) &&
-        (MSE_seq[tuning_ind - 2] > MSE_seq[tuning_ind - 3])
+          (MSE_seq[tuning_ind - 1] > MSE_seq[tuning_ind - 2]) &&
+          (MSE_seq[tuning_ind - 2] > MSE_seq[tuning_ind - 3])
       ) {
         break
       }
@@ -268,7 +268,7 @@ calc_coefficients <- function(X, t, W, w) {
 #'
 #' @noRd
 calc_tnew <- function(f, X, t) {
-  tnew <- purrr::map(1:nrow(X), ~projection_pme(X[.x, ], f, t[.x, ])) %>%
+  tnew <- purrr::map(1:nrow(X), ~ projection_pme(X[.x, ], f, t[.x, ])) %>%
     unlist() %>%
     matrix(nrow = nrow(X), byrow = TRUE)
   tnew
@@ -284,7 +284,7 @@ calc_tnew <- function(f, X, t) {
 #'
 #' @noRd
 calc_SSD <- function(f, X, t) {
-  SSD_val <- purrr::map(1:nrow(X), ~dist_euclidean(X[.x, ], f(t[.x, ]))^2) %>%
+  SSD_val <- purrr::map(1:nrow(X), ~ dist_euclidean(X[.x, ], f(t[.x, ]))^2) %>%
     unlist() %>%
     sum()
   SSD_val
@@ -341,7 +341,7 @@ plot_pme <- function(f, x, centers, sol, t, d) {
   pred_grid <- r_mat
   f_pred <- purrr::map(
     1:nrow(pred_grid),
-    ~f(unlist(as.vector(pred_grid[.x, ]))) %>%
+    ~ f(unlist(as.vector(pred_grid[.x, ]))) %>%
       as.vector()
   ) %>%
     unlist() %>%
@@ -414,20 +414,20 @@ calc_msd <- function(x, km, f, t, D, d) {
   data_initial <- data_initial[-1, ]
   proj_para <- purrr::map(
     1:nrow(data_initial),
-    ~projection_pme(data_initial[.x, 1:D], f, data_initial[.x, (D + 1):(D + d)]) %>%
+    ~ projection_pme(data_initial[.x, 1:D], f, data_initial[.x, (D + 1):(D + d)]) %>%
       t()
   ) %>%
     purrr::reduce(rbind)
   proj_points <- purrr::map(
     1:nrow(proj_para),
-    ~f(proj_para[.x, ]) %>%
+    ~ f(proj_para[.x, ]) %>%
       t()
   ) %>%
     purrr::reduce(rbind)
 
   mse <- purrr::map(
     1:nrow(data_initial),
-    ~dist_euclidean(data_initial[.x, 1:D], proj_points[.x, ])^2
+    ~ dist_euclidean(data_initial[.x, 1:D], proj_points[.x, ])^2
   ) %>%
     unlist() %>%
     mean()

@@ -43,7 +43,6 @@ lpme <- function(df,
                  SSD_ratio_threshold = 100,
                  increase_threshold = 1.05,
                  init = "full") {
-
   # Declare initial variable values ---------------------------------------
   time_points <- df[, 1] %>%
     unique()
@@ -113,7 +112,7 @@ lpme <- function(df,
 
     t_new2 <- purrr::map(
       1:nrow(X_new),
-      ~projection_lpme(X_new[.x, ], f0_new, full_t[.x, ], n_knots, d_new, gamma)
+      ~ projection_lpme(X_new[.x, ], f0_new, full_t[.x, ], n_knots, d_new, gamma)
     ) %>%
       purrr::reduce(cbind) %>%
       t()
@@ -131,7 +130,7 @@ lpme <- function(df,
       ~ dist_euclidean(
         X_new[.x, ],
         f_new(t_new2[.x, ])
-      ) ^ 2
+      )^2
     ) %>%
       unlist() %>%
       sum()
@@ -156,7 +155,7 @@ lpme <- function(df,
         r_list[[idx]] <- seq(
           r_bounds[1, idx],
           r_bounds[2, idx],
-          length.out = n_knots ^ (1 / d)
+          length.out = n_knots^(1 / d)
         )
       }
       # r_list[[1]] <- time_points
@@ -265,7 +264,7 @@ lpme <- function(df,
 
       proj_error_cv <- purrr::map(
         1:nrow(proj_points_cv),
-        ~dist_euclidean(temp_data_initial[.x, 1:D_new2], proj_points_cv[.x, ])
+        ~ dist_euclidean(temp_data_initial[.x, 1:D_new2], proj_points_cv[.x, ])
       ) %>%
         purrr::reduce(c)
       # proj_error_cv <- dist_euclideanC_vec(
@@ -273,7 +272,7 @@ lpme <- function(df,
       #   proj_points_cv
       # ) %>%
       #   as.vector()
-      cv_mse[time_idx] <- mean(proj_error_cv ^ 2)
+      cv_mse[time_idx] <- mean(proj_error_cv^2)
     }
 
     df_n <- sapply(time_points, function(x) nrow(df[df[, 1] == x, ]))
@@ -556,7 +555,7 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
     f <- pme_list$funcs[[time_idx]]
     output <- purrr::map(
       1:n_knots,
-      ~f(r_full[.x, ])
+      ~ f(r_full[.x, ])
     ) %>%
       purrr::reduce(rbind)
     x_vals[[time_idx]] <- cbind(time_points[time_idx], output)
@@ -613,7 +612,7 @@ plot_lpme <- function(x, f, r, d, D, time_points) {
 
   f_pred <- purrr::map(
     1:nrow(pred_grid),
-    ~f(pred_grid[.x, ])
+    ~ f(pred_grid[.x, ])
   ) %>%
     purrr::reduce(rbind)
   f_pred_full <- cbind(pred_grid, f_pred)
@@ -662,4 +661,3 @@ plot_lpme <- function(x, f, r, d, D, time_points) {
     print(plt)
   }
 }
-
