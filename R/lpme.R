@@ -158,7 +158,6 @@ lpme <- function(df,
           length.out = n_knots^(1 / d)
         )
       }
-      # r_list[[1]] <- time_points
       r_mat <- as.matrix(expand.grid(r_list))
       r_full_cv <- tidyr::expand_grid(time_points[-time_idx], r_mat) %>%
         as.matrix()
@@ -194,7 +193,6 @@ lpme <- function(df,
       coef_cv <- purrr::reduce(spline_coefs, rbind)
       x_test_cv <- x_vals
       X_new_cv <- x_test_cv
-      # I_new <- length(theta_hat_new)
       I_new_cv <- nrow(X_new_cv)
 
       r_cv <- matrix(
@@ -267,11 +265,6 @@ lpme <- function(df,
         ~ dist_euclidean(temp_data_initial[.x, 1:D_new2], proj_points_cv[.x, ])
       ) %>%
         purrr::reduce(c)
-      # proj_error_cv <- dist_euclideanC_vec(
-      #   temp_data_initial[, 1:D_new2],
-      #   proj_points_cv
-      # ) %>%
-      #   as.vector()
       cv_mse[time_idx] <- mean(proj_error_cv^2)
     }
 
