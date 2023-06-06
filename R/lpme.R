@@ -111,7 +111,7 @@ lpme <- function(df,
     full_t <- tidyr::expand_grid(time_points, t_initial) %>%
       as.matrix(ncol = d + 1)
 
-    t_new2 <- map(
+    t_new2 <- purrr::map(
       1:nrow(X_new),
       ~projection_lpme(X_new[.x, ], f0_new, full_t[.x, ], n_knots, d_new, gamma)
     ) %>%
@@ -331,7 +331,7 @@ lpme <- function(df,
       ylab = "MSD",
       type = "l"
     )
-    lines(
+    graphics::lines(
       log(tuning_para_seq[1:length(MSE_seq_new)]),
       MSE_seq_new,
       type = "p",
@@ -339,7 +339,7 @@ lpme <- function(df,
       col = "orange",
       cex = 2
     )
-    abline(
+    graphics::abline(
       v = log(tuning_para_seq[optimal_ind]),
       lwd = 1.5,
       col = "darkgreen",
@@ -394,11 +394,11 @@ embed <- function(object, x) {
 }
 
 parameterize <- function(object, x) {
-  embeddings <- map(
+  embeddings <- purrr::map(
     1:nrow(object$r_fit),
     ~ embed(object, object$r_fit[.x, ])
   ) %>%
-    reduce(rbind)
+    purrr::reduce(rbind)
   nearest <- calc_nearest_x(matrix(x, nrow = 1), embeddings[embeddings[, 1] == x[1], ])
   estimate <- projection_lpme(x, function(t) embed(object, t), object$r_fit[object$r_fit[, 1] == x[1], ][nearest, ])
 
@@ -571,7 +571,7 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
   for (time_idx in 1:length(time_points)) {
     lambda[time_idx] <- pme_list$pme_results[[time_idx]]$tuning
     f <- pme_list$funcs[[time_idx]]
-    output <- map(
+    output <- purrr::map(
       1:n_knots,
       ~f(r_full[.x, ])
     ) %>%
