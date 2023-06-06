@@ -54,6 +54,22 @@ is_lpme <- function(x) {
   inherits(x, "lpme")
 }
 
+#' Fit an LPME Object
+#'
+#' @param df A numeric matrix of data.
+#' @param d The intrinsic dimension of the data.
+#' @param tuning_para_seq A vector of numeric smoothing parameter values.
+#' @param alpha A value.
+#' @param max_comp The maximum number of clusters identified in the data.
+#' @param epsilon A value.
+#' @param max_iter The maximum number of iterations.
+#' @param verbose A logical value indicating whether messages should be printed.
+#' @param print_plots A logical value indicating whether plots should be printed.
+#' @param increase_threshold A value.
+#' @param init Indicates which time points are used to initialize the function.
+#'
+#' @return An object of type "lpme".
+#' @export
 lpme <- function(df,
                  d,
                  tuning_para_seq = c(0, exp(-15:10)),
