@@ -338,35 +338,7 @@ lpme <- function(df,
   f.optimal <- functions[[optimal_ind]]
 
   if (verbose == TRUE) {
-    plot(
-      log(tuning_para_seq[1:length(MSE_seq_new)]),
-      MSE_seq_new,
-      xlab = "Log Gamma",
-      ylab = "MSD",
-      type = "l"
-    )
-    graphics::lines(
-      log(tuning_para_seq[1:length(MSE_seq_new)]),
-      MSE_seq_new,
-      type = "p",
-      pch = 20,
-      col = "orange",
-      cex = 2
-    )
-    graphics::abline(
-      v = log(tuning_para_seq[optimal_ind]),
-      lwd = 1.5,
-      col = "darkgreen",
-      lty = 2
-    )
-    print(
-      paste(
-        "The optimal tuning parameter is ",
-        as.character(tuning_para_seq[optimal_ind]),
-        ", and the MSD of the optimal fit is ",
-        as.character(MSE_seq_new[optimal_ind], ".")
-      )
-    )
+    plot_MSE(MSE_seq_new, tuning_para_seq, optimal_ind)
   }
 
   lpme_out <- new_lpme(
@@ -692,4 +664,36 @@ plot_lpme <- function(x, f, r, d, D, time_points) {
       )
     print(plt)
   }
+}
+
+plot_MSE <- function(MSE_seq_new, tuning_para_seq, optimal_ind) {
+  plt <- ggplot2::ggplot() +
+    ggplot2::geom_line(
+      ggplot2::aes(
+        x = log(tuning_para_seq[1:length(MSE_seq_new)]),
+        y = MSE_seq_new
+      )
+    ) +
+    ggplot2::geom_point(
+      ggplot2::aes(
+        x = log(tuning_para_seq[1:length(MSE_seq_new)]),
+        y = MSE_seq_new
+      ),
+      color = "orange"
+    ) +
+    ggplot2::geom_vline(
+      xintercept = log(tuning_para_seq[optimal_ind]),
+      color = "darkgreen"
+    ) +
+    ggplot2::xlab("Log Gamma") +
+    ggplot2::ylab("MSD")
+  print(
+    paste0(
+      "The optimal tuning parameter is ",
+      as.character(tuning_para_seq[optimal_ind]),
+      ", and the MSD of the optimal fit is ",
+      as.character(MSE_seq_new[optimal_ind], ".")
+    )
+  )
+  print(plt)
 }
