@@ -132,11 +132,11 @@ lpme <- function(df,
       gamma,
       gamma2
     )
-    f_coef <- f_coef_list$f
-    sol_coef <- f_coef_list$sol
+    # f_coef <- f_coef_list$f
+    # sol_coef <- f_coef_list$sol
 
     f_new <- function(t) {
-      coefs <- f_coef(t[1])
+      coefs <- f_coef_list$f(t[1])
       coef_mat <- matrix(coefs, n_knots + d_new + 1, byrow = TRUE)
       return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, gamma) +
         t(coef_mat[(n_knots + 1):(n_knots + d_new + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
@@ -254,7 +254,7 @@ lpme <- function(df,
       f_coef_cv <- function(t) {
         return_vec <- as.vector(
           t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
-            t(sol_coef[(nrow(coef_cv) + 1):(nrow(coef_cv) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+            t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
         )
         return(return_vec)
       }
@@ -321,12 +321,12 @@ lpme <- function(df,
       )
     }
 
-    SOL_coef[[tuning_ind]] <- sol_coef
+    SOL_coef[[tuning_ind]] <- f_coef_list$sol
     TNEW_new[[tuning_ind]] <- t_new2
     coefs[[tuning_ind]] <- r_mat
     x_funs[[tuning_ind]] <- x_fun
     functions[[tuning_ind]] <- f_new
-    func_coef[[tuning_ind]] <- f_coef
+    func_coef[[tuning_ind]] <- f_coef_list$f
   }
 
   optimal_ind <- min(which(MSE_seq_new == min(MSE_seq_new)))
