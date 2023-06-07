@@ -141,24 +141,16 @@ lpme <- function(df,
       c(t[1], return_vec)
     }
 
-    # beginning of update_parameterization()
-    full_t <- tidyr::expand_grid(time_points, t_initial) %>%
-      as.matrix(ncol = d + 1)
-
-    t_new2 <- purrr::map(
-      1:nrow(X_new),
-      ~ projection_lpme(X_new[.x, ], f_new, full_t[.x, ], n_knots, d_new, gamma)
-    ) %>%
-      purrr::reduce(cbind) %>%
-      t()
-
-    x_fun <- purrr::map(
-      1:I_new,
-      ~ f_new(full_t[.x, ])
-    ) %>%
-      purrr::reduce(rbind)
-    # end of update_parameterization()
-
+    updated_param <- update_parameterization(
+      time_points,
+      t_initial,
+      X_new,
+      f_new,
+      n_knots,
+      d,
+      d_new,
+      gamma
+    )
 
     if (print_plots == TRUE) {
       plot_lpme(df, f_new, t_initial, d_new, D_new, time_points)
@@ -166,7 +158,7 @@ lpme <- function(df,
 
     # Cross-validation section
     nearest_x <- calc_nearest_x(df, x_test)
-    init_param <- calc_init_param(df, t_new2, nearest_x)
+    init_param <- calc_init_param(df, updated_param$parameterization, nearest_x)
 
     data_initial <- cbind(df, init_param)
 
@@ -175,7 +167,7 @@ lpme <- function(df,
     # provide options for other types?
     for (time_idx in 1:length(time_points)) {
       # create parameter matrix
-      r_bounds <- Rfast::colMinsMaxs(t_new2[, -1])
+      r_bounds <- Rfast::colMinsMaxs(updated_param$parameterization[, -1])
       r_list <- list()
       for (idx in 1:dim(r_bounds)[2]) {
         r_list[[idx]] <- seq(
@@ -310,9 +302,9 @@ lpme <- function(df,
     }
 
     SOL_coef[[tuning_ind]] <- f_coef_list$sol
-    TNEW_new[[tuning_ind]] <- t_new2
+    TNEW_new[[tuning_ind]] <- updated_param$parameterization
     coefs[[tuning_ind]] <- r_mat
-    x_funs[[tuning_ind]] <- x_fun
+    x_funs[[tuning_ind]] <- updated_param$embedding
     functions[[tuning_ind]] <- f_new
     func_coef[[tuning_ind]] <- f_coef_list$f
   }
@@ -689,4 +681,22 @@ calc_SSD <- function(X, r, f) {
     unlist() %>%
     sum()
   SSD_val
+}
+
+update_parameterization <- function(time_points, r, X, f, n_knots, d, d2, gamma) {
+  full_r <- tidyr::expand_grid(time_points, r) %>%
+    as.matrix(ncol = d + 1)
+  new_param <- purrr::map(
+    1:nrow(X),
+    ~ projection_lpme(X[.x, ], f, full_r[.x, ], n_knots, d2, gamma)
+  ) %>%
+    purrr::reduce(cbind) %>%
+    t()
+  X_update <- purrr::map(1:nrow(full_r), ~ f(full_r[.x, ])) %>%
+    purrr::reduce(rbind)
+
+  list(
+    parameterization = new_param,
+    embedding = X_update
+  )
 }
