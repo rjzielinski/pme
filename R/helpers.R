@@ -95,7 +95,8 @@ projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
     stats::nlm(
       function(t) dist_euclidean(x = x, f(matrix(c(initial_guess[1], t), nrow = 1))),
       p = initial_guess[-1]
-    )
+    ),
+    silent = TRUE
   )
   if (inherits(nlm_est, "try-error")) {
     opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-07)
@@ -104,7 +105,8 @@ projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
         x0 = initial_guess[-1],
         function(t) dist_euclidean(x = x, f(c(initial_guess[1], t))),
         opts = opts
-      )
+      ),
+      silent = TRUE
     )
     if (inherits(nlopt_est, "try-error")) {
       return(NULL)
