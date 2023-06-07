@@ -519,16 +519,17 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
 
   r_full <- purrr::reduce(pme_list$r, rbind)
   length_r <- ceiling(max(pme_list$num_clusters)^(1 / d))
-  r_bounds <- Rfast::colMinsMaxs(r_full)
-  r_list <- list()
-  for (idx in 1:dim(r_bounds)[2]) {
-    r_list[[idx]] <- seq(
-      r_bounds[1, idx],
-      r_bounds[2, idx],
-      length.out = length_r
-    )
-  }
-  r_full <- as.matrix(expand.grid(r_list))
+  r_full <- gen_parameterization(r_full, ceiling(max(pme_list$num_clusters)), d)
+  # r_bounds <- Rfast::colMinsMaxs(r_full)
+  # r_list <- list()
+  # for (idx in 1:dim(r_bounds)[2]) {
+  #   r_list[[idx]] <- seq(
+  #     r_bounds[1, idx],
+  #     r_bounds[2, idx],
+  #     length.out = length_r
+  #   )
+  # }
+  # r_full <- as.matrix(expand.grid(r_list))
   n_knots <- nrow(r_full)
   r_full2 <- purrr::reduce(pme_list$r2, rbind)
 
@@ -700,3 +701,145 @@ update_parameterization <- function(time_points, r, X, f, n_knots, d, d2, gamma)
     embedding = X_update
   )
 }
+
+calc_mse_cv <- function(k, time_points, r) {
+  cv_mse <- vector()
+
+}
+
+gen_parameterization <- function(r, n_knots, d) {
+  r_bounds <- Rfast::colMinsMaxs(r[, -1])
+  r_list <- list()
+  for (idx in 1:dim(r_bounds)[2]) {
+    r_list[[idx]] <- seq(
+      r_bounds[1, idx],
+      r_bounds[2, idx],
+      length.out = n_knots^(1 / d)
+    )
+  }
+  r_mat <- as.matrix(expand.grid(r_list))
+  r_mat
+}
+
+cv_mse <- vector()
+    # leave-one-out cross-validation
+    # provide options for other types?
+    for (time_idx in 1:length(time_points)) {
+      # create parameter matrix
+      r_bounds <- Rfast::colMinsMaxs(updated_param$parameterization[, -1])
+      r_list <- list()
+      for (idx in 1:dim(r_bounds)[2]) {
+        r_list[[idx]] <- seq(
+          r_bounds[1, idx],
+          r_bounds[2, idx],
+          length.out = n_knots^(1 / d)
+        )
+      }
+      r_mat <- as.matrix(expand.grid(r_list))
+      r_full_cv <- tidyr::expand_grid(time_points[-time_idx], r_mat) %>%
+        as.matrix()
+
+      spline_coefs <- list()
+
+      x_vals <- purrr::map(
+        1:nrow(r_full_cv),
+        ~ f_new(r_full_cv[.x, ])
+      ) %>%
+        purrr::reduce(rbind)
+
+      for (idx in 1:length(time_points)) {
+        if (time_idx == idx) {
+          next
+        }
+
+        R <- cbind(rep(1, n_knots), r_mat)
+        E <- calcE(r_mat, gamma)
+
+        spline_coefs[[idx]] <- solve_spline(
+          E,
+          R,
+          x_vals[x_vals[, 1] == time_points[idx], -1],
+          lambda[idx],
+          d_new,
+          D_new
+        ) %>%
+          t() %>%
+          matrix(nrow = 1)
+      }
+
+      coef_cv <- purrr::reduce(spline_coefs, rbind)
+      x_test_cv <- x_vals
+      X_new_cv <- x_test_cv
+      I_new_cv <- nrow(X_new_cv)
+
+      r_cv <- matrix(
+        r_full2[r_full2[, 1] != time_points[time_idx], ],
+        ncol = 1
+      )
+
+      T_new2 <- cbind(rep(1, nrow(r_full2)), r_full2)
+      E_new_cv <- calcE(r_cv, gamma2)
+      T_new_cv <- T_new2[T_new2[, 2] != time_points[time_idx], ]
+
+      sol_coef_cv <- solve_spline(
+        E_new_cv,
+        T_new_cv,
+        coef_cv,
+        tuning_para_seq[tuning_ind],
+        d_new2,
+        D_coef
+      )
+
+      f_coef_cv <- function(t) {
+        return_vec <- as.vector(
+          t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
+            t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+        )
+        return(return_vec)
+      }
+
+      f_new_cv <- function(t) {
+        coefs <- f_coef_cv(t[1])
+        coef_mat <- matrix(coefs, n_knots + d_new + 1, byrow = TRUE)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, gamma) +
+          t(coef_mat[(n_knots + 1):(n_knots + d_new + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        return(c(t[1], return_vec))
+      }
+
+      temp_data_initial <- data_initial[data_initial[, 1] == time_points[time_idx], ]
+      proj_para_cv <- purrr::map(
+        1:nrow(temp_data_initial),
+        ~ try({
+          projection_lpme(
+            temp_data_initial[.x, 1:D_new2],
+            f_new_cv,
+            temp_data_initial[.x, (D_new2 + 1):(D_new2 + d_new + 1)]
+          ) %>%
+            t()
+        })
+      )
+
+      errors <- vector()
+      for (i in 1:length(proj_para_cv)) {
+        errors[i] <- sum(class(proj_para_cv[[i]]) == "try-error") > 0
+      }
+
+      if (sum(errors) > 0) {
+        proj_para_cv <- purrr::reduce(proj_para_cv, rbind)[-which(errors), ]
+      } else {
+        proj_para_cv <- purrr::reduce(proj_para_cv, rbind)
+      }
+
+      proj_points_cv <- t(apply(proj_para_cv, 1, f_new_cv))
+
+      if (sum(errors) > 0) {
+        temp_data_initial <- temp_data_initial[-which(errors), ]
+      }
+
+      proj_error_cv <- purrr::map(
+        1:nrow(proj_points_cv),
+        ~ dist_euclidean(temp_data_initial[.x, 1:D_new2], proj_points_cv[.x, ])
+      ) %>%
+        purrr::reduce(c)
+      cv_mse[time_idx] <- mean(proj_error_cv^2)
+    }
