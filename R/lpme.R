@@ -143,15 +143,13 @@ lpme <- function(df,
       c(t[1], return_vec)
     }
 
-    f0_new <- f_new # is this necessary?
-
     # beginning of update_parameterization()
     full_t <- tidyr::expand_grid(time_points, t_initial) %>%
       as.matrix(ncol = d + 1)
 
     t_new2 <- purrr::map(
       1:nrow(X_new),
-      ~ projection_lpme(X_new[.x, ], f0_new, full_t[.x, ], n_knots, d_new, gamma)
+      ~ projection_lpme(X_new[.x, ], f_new, full_t[.x, ], n_knots, d_new, gamma)
     ) %>%
       purrr::reduce(cbind) %>%
       t()
