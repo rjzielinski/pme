@@ -132,8 +132,6 @@ lpme <- function(df,
       gamma,
       gamma2
     )
-    # f_coef <- f_coef_list$f
-    # sol_coef <- f_coef_list$sol
 
     f_new <- function(t) {
       coefs <- f_coef_list$f(t[1])
