@@ -313,7 +313,7 @@ lpme <- function(df,
 
     if (verbose == TRUE) {
       print(
-        paste(
+        paste0(
           "When gamma = ",
           as.character(tuning_para_seq[tuning_ind]),
           ", MSD = ",
