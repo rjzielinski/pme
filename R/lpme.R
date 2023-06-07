@@ -159,16 +159,6 @@ lpme <- function(df,
       purrr::reduce(rbind)
     # end of update_parameterization()
 
-    # calc_SSD() function - is this necessary without further iteration?
-    SSD_new <- purrr::map(
-      1:I_new,
-      ~ dist_euclidean(
-        X_new[.x, ],
-        f_new(t_new2[.x, ])
-      )^2
-    ) %>%
-      unlist() %>%
-      sum()
 
     if (print_plots == TRUE) {
       plot_lpme(df, f_new, t_initial, d_new, D_new, time_points)
@@ -692,4 +682,11 @@ plot_MSE <- function(MSE_seq_new, tuning_para_seq, optimal_ind) {
     )
   )
   print(plt)
+}
+
+calc_SSD <- function(X, r, f) {
+  SSD_val <- purrr::map(1:nrow(X), ~ dist_euclidean(X[.x, ], f(r[.x, ]))^2) %>%
+    unlist() %>%
+    sum()
+  SSD_val
 }
