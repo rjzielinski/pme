@@ -185,15 +185,7 @@ lpme <- function(df,
     MSE_seq_new[tuning_ind] <- MSE_new
 
     if (verbose == TRUE) {
-      print(
-        paste0(
-          "When gamma = ",
-          as.character(tuning_para_seq[tuning_ind]),
-          ", MSD = ",
-          as.character(MSE_new),
-          "."
-        )
-      )
+      print_mse(tuning_para_seq[tuning_ind], MSE_new)
     }
 
     SOL_coef[[tuning_ind]] <- f_coef_list$sol
@@ -693,4 +685,16 @@ gen_parameterization <- function(r, n_knots, d) {
   }
   r_mat <- as.matrix(expand.grid(r_list))
   r_mat
+}
+
+print_mse <- function(tuning, MSE) {
+  print(
+    paste0(
+      "When gamma = ",
+      as.character(tuning),
+      ", MSD = ",
+      as.character(MSE),
+      "."
+    )
+  )
 }
