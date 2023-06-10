@@ -108,8 +108,6 @@ lpme <- function(df,
   t_initial <- r_full %>%
     as.matrix()
 
-  print(dim(t_initial))
-
   MSE_seq_new <- vector()
   SOL_coef <- list()
   TNEW_new <- list()
@@ -667,7 +665,6 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
     ) %>%
       purrr::reduce(rbind)
 
-    print(cv_projections)
     cv_points <- purrr::map(
       1:nrow(cv_projections),
       ~ f_new_cv(cv_projections[.x, ])
