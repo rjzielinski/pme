@@ -2,143 +2,160 @@
 #'
 #' This function still requires completed documentation
 #'
-#' @param x_obs Value
-#' @param d Value
-#' @param initialization Value
-#' @param N0 Value
-#' @param tuning_para_seq Value
-#' @param alpha Value
-#' @param max_comp Value
-#' @param epsilon Value
-#' @param max_iter Value
-#' @param SSD_ratio_threshold Value
-#' @param print_plots Value
-#' @param verbose Value
+#' @param data A numeric matrix of high-dimensional data.
+#' @param d A positive integer representing the intrinsic dimension.
+#' @param initialization A list of values providing an initialization for `pme()`. It is not recommended to supply these values manually.
+#' @param lambda A vector of smoothing values to be considered.
+#' @param alpha The significant level to be used when testing the need for additional clusters in data reduction.
+#' @param min_clusters The minimum number of clusters allowed in data reduction.
+#' @param max_clusters The maximum number of clusters allowed in data reduction.
+#' @param epsilon Threshold for change in SSD to stop iterations for a given smoothing value.
+#' @param max_iter The maximum number of iterations allowed for a given smoothing value.
+#' @param SSD_ratio_threshold  The maximum increase in SSD allowed before stopping iterations for a given smoothing value.
+#' @param print_plots A logical value indicating whether plots of the estimated manifolds should be produced.
+#' @param verbose A logical value indicating whether updates should be printed.
 #'
 #' @return An object of type pme.
 #' @export
 #'
-pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = exp(-15:5), alpha = 0.05, max_comp = 100, epsilon = 0.05, max_iter = 100, SSD_ratio_threshold = 10, print_plots = FALSE, verbose = FALSE) {
+#' @examples
+#' r <- runif(1000, min = 0, max = pi)
+#' x <- sin(r) + rnorm(1000, mean = 0, sd = 0.25)
+#' mat <- cbind(r, x)
+#' out <- pme(mat, d = 1)
+pme <- function(
+    data,
+    d,
+    initialization = NULL,
+    lambda = exp(-15:5),
+    alpha = 0.05,
+    min_clusters = 0,
+    max_clusters = 100,
+    epsilon = 0.05,
+    max_iter = 100,
+    SSD_ratio_threshold = 10,
+    print_plots = FALSE,
+    verbose = FALSE) {
   # Initial variable assignments --------------------------
-  n <- dim(x_obs)[1]
-  D <- dim(x_obs)[2]
-  lambda <- 4 - d
+  n <- dim(data)[1]
+  D <- dim(data)[2]
 
-  if (N0 == 0) {
-    N0 <- 20 * D
+  if (min_clusters == 0) {
+    min_clusters <- 20 * D
   }
-  if (N0 > max_comp) {
-    max_comp <- 2 * N0
+  if (min_clusters > max_clusters) {
+    max_clusters <- 2 * min_clusters
   }
 
-  MSE_seq <- vector()
-  SOL <- list()
-  TNEW <- list()
+  mse <- vector()
+  coefs <- list()
+  parameterization <- list()
   embeddings <- list()
 
   # Initialization ----------------------------------------
 
   if (is.null(initialization)) {
-    initialization <- initialize_pme(x_obs, d, N0, alpha, max_comp)
+    initialization <- initialize_pme(data, d, min_clusters, alpha, max_clusters)
   }
-  initial_parameterization <- initialization$parameterization
-  theta_hat <- initialization$theta_hat
-  centers <- initialization$centers
-  sigma <- initialization$sigma
-  W <- diag(theta_hat)
-  X <- centers
-  I <- length(theta_hat)
-  t_initial <- initial_parameterization
+  weights <- diag(initialization$theta_hat)
+  X <- initialization$centers
+  I <- length(initialization$theta_hat)
 
   # Fitting
-  for (tuning_ind in 1:length(tuning_para_seq)) {
-    w <- tuning_para_seq[tuning_ind]
-    sol <- calc_coefficients(X, t_initial, W, w)
+  for (tuning_idx in 1:length(lambda)) {
+    w <- lambda[tuning_idx]
+    spline_coefs <- calc_coefficients(
+      X,
+      initialization$parameterization,
+      weights,
+      w
+    )
 
-    fnew <- function(t) {
+    f_embedding <- function(parameters) {
       as.vector(
-        (t(sol[1:I, ]) %*% etaFunc(t, t_initial, lambda)) +
-          (t(sol[(I + 1):(I + d + 1), ]) %*% matrix(c(1, t), ncol = 1))
+        (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, initialization$parameterization, 4 - d)) +
+          (t(spline_coefs[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
       )
     }
 
-    tnew <- calc_tnew(fnew, X, t_initial)
-    SSD_new <- calc_SSD(fnew, X, tnew)
+    params <- calc_params(f_embedding, X, initialization$parameterization)
+    SSD_new <- calc_SSD(f_embedding, X, params)
 
     count <- 1
     SSD_ratio <- 10 * epsilon
 
     while ((SSD_ratio > epsilon) && (SSD_ratio <= SSD_ratio_threshold) && (count <= max_iter)) {
       SSD_old <- SSD_new
-      f0 <- fnew
-      t_old <- tnew
+      f0 <- f_embedding
+      params_prev <- params
 
-      sol <- calc_coefficients(X, tnew, W, w)
+      spline_coefs <- calc_coefficients(X, params, weights, w)
 
-      fnew <- function(t) {
+      f_embedding <- function(parameters) {
         as.vector(
-          (t(sol[1:I, ]) %*% etaFunc(t, tnew, lambda)) +
-            (t(sol[(I + 1):(I + d + 1), ]) %*% matrix(c(1, t), ncol = 1))
+          (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
+            (t(spline_coefs[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
         )
       }
 
-      tnew <- calc_tnew(fnew, X, t_old)
-      SSD_new <- calc_SSD(fnew, X, tnew)
+      params <- calc_params(f_embedding, X, params_prev)
+      SSD_new <- calc_SSD(f_embedding, X, params)
 
       SSD_ratio <- abs(SSD_new - SSD_old) / SSD_old
       count <- count + 1
 
       if (verbose == TRUE) {
-        print_SSD(w, tuning_para_seq[tuning_ind], SSD_new, SSD_ratio, count)
+        print_SSD(w, lambda[tuning_idx], SSD_new, SSD_ratio, count)
       }
     }
 
     if (print_plots == TRUE) {
-      plot_pme(fnew, x_obs, X, sol, tnew, d)
+      plot_pme(f_embedding, data, X, spline_coefs, params, d)
     }
 
-    MSE_seq[tuning_ind] <- calc_msd(x_obs, initialization$km, fnew, tnew, D, d)
-    SOL[[tuning_ind]] <- sol
-    TNEW[[tuning_ind]] <- tnew
-    embeddings[[tuning_ind]] <- fnew
-    if (tuning_ind >= 4) {
+    mse[tuning_idx] <- calc_msd(data, initialization$km, f_embedding, params, D, d)
+    coefs[[tuning_idx]] <- spline_coefs
+    parameterization[[tuning_idx]] <- params
+    embeddings[[tuning_idx]] <- f_embedding
+    if (tuning_idx >= 4) {
       if (
-        (MSE_seq[tuning_ind] > MSE_seq[tuning_ind - 1]) &&
-          (MSE_seq[tuning_ind - 1] > MSE_seq[tuning_ind - 2]) &&
-          (MSE_seq[tuning_ind - 2] > MSE_seq[tuning_ind - 3])
+        (mse[tuning_idx] > mse[tuning_idx - 1]) &&
+          (mse[tuning_idx - 1] > mse[tuning_idx - 2]) &&
+          (mse[tuning_idx - 2] > mse[tuning_idx - 3])
       ) {
         break
       }
     }
   }
 
-  optimal_ind <- min(which(MSE_seq == min(MSE_seq)))
-  sol_opt <- SOL[[optimal_ind]]
-  t_opt <- TNEW[[optimal_ind]]
+  optimal_idx <- min(which(mse == min(mse)))
+  coefs_opt <- coefs[[optimal_idx]]
+  t_opt <- parameterization[[optimal_idx]]
 
   if (verbose == TRUE) {
     paste0(
       "The optimal tuning parameter is ",
-      as.character(tuning_para_seq[optimal_ind]),
+      as.character(lambda[optimal_idx]),
       ", and the MSD of the optimal fit is ",
-      as.character(MSE_seq[optimal_ind]),
+      as.character(mse[optimal_idx]),
       "."
     )
   }
 
   pme_out <- new_pme(
-    embedding_map = embeddings[[optimal_ind]],
+    embedding_map = embeddings[[optimal_idx]],
     knots = initialization$km,
-    knot_weights = theta_hat,
-    kernel_coefs = sol_opt[1:I, ],
-    poly_coefs = sol_opt[(I + 1):(I + d + 1), ],
-    tuning = tuning_para_seq[optimal_ind],
-    MSD = MSE_seq,
-    coefs = SOL,
-    params = TNEW,
-    tuning_vec = tuning_para_seq,
+    knot_weights = initialization$theta_hat,
+    kernel_coefs = coefs_opt[1:I, ],
+    polynomial_coefs = coefs_opt[(I + 1):(I + d + 1), ],
+    tuning = lambda[optimal_idx],
+    MSD = mse,
+    coefs = coefs,
+    parameterization = parameterization,
+    tuning_vec = lambda,
     embeddings = embeddings
   )
+  pme_out
 }
 
 #' Create New PME Object
@@ -150,14 +167,14 @@ pme <- function(x_obs, d, initialization = NULL, N0 = 20 * D, tuning_para_seq = 
 #' each mixture component.
 #' @param kernel_coefs A numeric matrix of the coefficients in the first
 #' part of a spline function.
-#' @param poly_coefs A numeric matrix of the coefficients in the second
+#' @param polynomial_coefs A numeric matrix of the coefficients in the second
 #' part of a spline function.
 #' @param tuning A numeric value describing the smoothing parameter.
 #' @param MSD A numeric vector of the mean squared distances associated with
 #' the estimated embedding maps for each smoothing value.
 #' @param coefs A list of the estimated spline coefficients of the embedding
 #' maps for each smoothing value.
-#' @param params A list of the estimated parameterizations of the mixture
+#' @param parameterization A list of the estimated parameterizations of the mixture
 #' components for each smoothing value.
 #' @param tuning_vec A numeric vector of smoothing values.
 #' @param embeddings A list of the embedding maps estimated at each smoothing
@@ -170,11 +187,11 @@ new_pme <- function(embedding_map,
                     knots,
                     knot_weights,
                     kernel_coefs,
-                    poly_coefs,
+                    polynomial_coefs,
                     tuning,
                     MSD,
                     coefs,
-                    params,
+                    parameterization,
                     tuning_vec,
                     embeddings) {
   pme_list <- list(
@@ -182,11 +199,11 @@ new_pme <- function(embedding_map,
     knots = knots,
     knot_weights = knot_weights,
     kernel_coefs = kernel_coefs,
-    poly_coefs = poly_coefs,
+    polynomial_coefs = polynomial_coefs,
     tuning = tuning,
     MSD = MSD,
     coefs = coefs,
-    params = params,
+    parameterization = parameterization,
     tuning_vec = tuning_vec,
     embeddings = embeddings
   )
@@ -213,15 +230,15 @@ is_pme <- function(x) {
 #'
 #' @param x A numeric matrix of data.
 #' @param d The intrinsic dimension.
-#' @param N0 The minimum number of mixture components.
+#' @param min_clusters The minimum number of mixture components.
 #' @param alpha Significance level.
-#' @param max_comp Maximum number of components.
+#' @param max_clusters Maximum number of components.
 #'
 #' @return A list used to initialize PME.
 #'
 #' @noRd
-initialize_pme <- function(x, d, N0, alpha, max_comp) {
-  est <- hdmde(x, N0, alpha, max_comp)
+initialize_pme <- function(x, d, min_clusters, alpha, max_clusters) {
+  est <- hdmde(x, min_clusters, alpha, max_clusters)
   est_order <- order(est$mu[, 1])
   theta_hat <- est$theta_hat[est_order]
   centers <- est$mu[est_order, ]
@@ -246,16 +263,16 @@ initialize_pme <- function(x, d, N0, alpha, max_comp) {
 #'
 #' @param X Numeric matrix of high-dimensional data.
 #' @param t Numeric matrix of low-dimensional paramterizations.
-#' @param W Numeric matrix of cluster weights.
+#' @param weights Numeric matrix of cluster weights.
 #' @param w smoothing parameter.
 #'
 #' @return A matrix of spline coefficients.
 #'
 #' @noRd
-calc_coefficients <- function(X, t, W, w) {
+calc_coefficients <- function(X, t, weights, w) {
   t_val <- cbind(rep(1, nrow(t)), t)
   E <- calcE(t, 4 - ncol(t))
-  solve_weighted_spline(E, W, t_val, X, w, ncol(t), ncol(X))
+  solve_weighted_spline(E, weights, t_val, X, w, ncol(t), ncol(X))
 }
 
 #' Calculate a New Parameterization
@@ -267,11 +284,11 @@ calc_coefficients <- function(X, t, W, w) {
 #' @return A numeric matrix of parameterizations.
 #'
 #' @noRd
-calc_tnew <- function(f, X, t) {
-  tnew <- purrr::map(1:nrow(X), ~ projection_pme(X[.x, ], f, t[.x, ])) %>%
+calc_params <- function(f, X, init_params) {
+  params <- purrr::map(1:nrow(X), ~ projection_pme(X[.x, ], f, init_params[.x, ])) %>%
     unlist() %>%
     matrix(nrow = nrow(X), byrow = TRUE)
-  tnew
+ params
 }
 
 #' Calculate Sum of Squared Distances
@@ -326,7 +343,7 @@ print_SSD <- function(w, tuning_val, SSD_new, SSD_ratio, count) {
 #' @noRd
 plot_pme <- function(f, x, centers, sol, t, d) {
   # pred_grid <- calc_tnew(centers, t, sol, I, d, lambda)
-  pred_grid <- calc_tnew(f, centers, t)
+  pred_grid <- calc_params(f, centers, t)
   r_bounds <- Rfast::colMinsMaxs(pred_grid)
   r_list <- list()
   for (idx in 1:dim(r_bounds)[2]) {

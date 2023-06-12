@@ -5,13 +5,13 @@
 \title{Principal Manifold Estimation}
 \usage{
 pme(
-  x_obs,
+  data,
   d,
   initialization = NULL,
-  N0 = 20 * D,
-  tuning_para_seq = exp(-15:5),
+  lambda = exp(-15:5),
   alpha = 0.05,
-  max_comp = 100,
+  min_clusters = 0,
+  max_clusters = 100,
   epsilon = 0.05,
   max_iter = 100,
   SSD_ratio_threshold = 10,
@@ -20,33 +20,39 @@ pme(
 )
 }
 \arguments{
-\item{x_obs}{Value}
+\item{data}{A numeric matrix of high-dimensional data.}
 
-\item{d}{Value}
+\item{d}{A positive integer representing the intrinsic dimension.}
 
-\item{initialization}{Value}
+\item{initialization}{A list of values providing an initialization for \code{pme()}. It is not recommended to supply these values manually.}
 
-\item{N0}{Value}
+\item{lambda}{A vector of smoothing values to be considered.}
 
-\item{tuning_para_seq}{Value}
+\item{alpha}{The significant level to be used when testing the need for additional clusters in data reduction.}
 
-\item{alpha}{Value}
+\item{min_clusters}{The minimum number of clusters allowed in data reduction.}
 
-\item{max_comp}{Value}
+\item{max_clusters}{The maximum number of clusters allowed in data reduction.}
 
-\item{epsilon}{Value}
+\item{epsilon}{Threshold for change in SSD to stop iterations for a given smoothing value.}
 
-\item{max_iter}{Value}
+\item{max_iter}{The maximum number of iterations allowed for a given smoothing value.}
 
-\item{SSD_ratio_threshold}{Value}
+\item{SSD_ratio_threshold}{The maximum increase in SSD allowed before stopping iterations for a given smoothing value.}
 
-\item{print_plots}{Value}
+\item{print_plots}{A logical value indicating whether plots of the estimated manifolds should be produced.}
 
-\item{verbose}{Value}
+\item{verbose}{A logical value indicating whether updates should be printed.}
 }
 \value{
 An object of type pme.
 }
 \description{
 This function still requires completed documentation
+}
+\examples{
+r <- runif(1000, min = 0, max = pi)
+x <- sin(r) + rnorm(1000, mean = 0, sd = 0.25)
+mat <- cbind(r, x)
+out <- pme(mat, d = 1)
 }
