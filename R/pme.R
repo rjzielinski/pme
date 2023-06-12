@@ -63,12 +63,11 @@ pme <- function(
 
   # Fitting
   for (tuning_idx in 1:length(lambda)) {
-    w <- lambda[tuning_idx]
     spline_coefs <- calc_coefficients(
       X,
       initialization$parameterization,
       weights,
-      w
+      lambda[tuning_idx]
     )
 
     f_embedding <- function(parameters) {
@@ -79,17 +78,17 @@ pme <- function(
     }
 
     params <- calc_params(f_embedding, X, initialization$parameterization)
-    SSD_new <- calc_SSD(f_embedding, X, params)
+    SSD <- calc_SSD(f_embedding, X, params)
 
     count <- 1
     SSD_ratio <- 10 * epsilon
 
     while ((SSD_ratio > epsilon) && (SSD_ratio <= SSD_ratio_threshold) && (count <= max_iter)) {
-      SSD_old <- SSD_new
+      SSD_old <- SSD
       f0 <- f_embedding
       params_prev <- params
 
-      spline_coefs <- calc_coefficients(X, params, weights, w)
+      spline_coefs <- calc_coefficients(X, params, weights, lambda[tuning_idx])
 
       f_embedding <- function(parameters) {
         as.vector(
@@ -99,13 +98,13 @@ pme <- function(
       }
 
       params <- calc_params(f_embedding, X, params_prev)
-      SSD_new <- calc_SSD(f_embedding, X, params)
+      SSD <- calc_SSD(f_embedding, X, params)
 
-      SSD_ratio <- abs(SSD_new - SSD_old) / SSD_old
+      SSD_ratio <- abs(SSD - SSD_old) / SSD_old
       count <- count + 1
 
       if (verbose == TRUE) {
-        print_SSD(w, lambda[tuning_idx], SSD_new, SSD_ratio, count)
+        print_SSD(lambda[tuning_idx], SSD, SSD_ratio, count)
       }
     }
 
@@ -118,11 +117,7 @@ pme <- function(
     parameterization[[tuning_idx]] <- params
     embeddings[[tuning_idx]] <- f_embedding
     if (tuning_idx >= 4) {
-      if (
-        (mse[tuning_idx] > mse[tuning_idx - 1]) &&
-          (mse[tuning_idx - 1] > mse[tuning_idx - 2]) &&
-          (mse[tuning_idx - 2] > mse[tuning_idx - 3])
-      ) {
+      if (!is.unsorted(mse[(tuning_idx - 3):tuning_idx])) {
         break
       }
     }
@@ -130,7 +125,7 @@ pme <- function(
 
   optimal_idx <- min(which(mse == min(mse)))
   coefs_opt <- coefs[[optimal_idx]]
-  t_opt <- parameterization[[optimal_idx]]
+  params_opt <- parameterization[[optimal_idx]]
 
   if (verbose == TRUE) {
     paste0(
@@ -315,7 +310,7 @@ calc_SSD <- function(f, X, t) {
 #' @param count The iteration number.
 #'
 #' @noRd
-print_SSD <- function(w, tuning_val, SSD_new, SSD_ratio, count) {
+print_SSD <- function(tuning_val, SSD_new, SSD_ratio, count) {
   print(
     paste0(
       "For tuning parameter ",
