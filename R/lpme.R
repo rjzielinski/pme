@@ -1,7 +1,7 @@
 #' Create New LPME Object
 #'
 #' @param msd Vector of Mean Squared Distance Values.
-#' @param sol_coef A value.
+#' @param sol_coef sol_coef.
 #' @param times A value.
 #' @param r_init A value.
 #' @param r_fit A value.
@@ -56,11 +56,12 @@ is_lpme <- function(x) {
 
 #' Fit an LPME Object
 #'
-#' @param df A numeric matrix of data.
+#' @param data A numeric matrix of data.
 #' @param d The intrinsic dimension of the data.
+#' @param smoothing_method The approach taken to smoothing over PME coefficients.
 #' @param tuning_para_seq A vector of numeric smoothing parameter values.
 #' @param alpha A value.
-#' @param max_comp The maximum number of clusters identified in the data.
+#' @param max_clusters The maximum number of clusters identified in the data.
 #' @param epsilon A value.
 #' @param max_iter The maximum number of iterations.
 #' @param verbose A logical value indicating whether messages should be printed.
@@ -70,11 +71,12 @@ is_lpme <- function(x) {
 #'
 #' @return An object of type "lpme".
 #' @export
-lpme <- function(df,
+lpme <- function(data,
                  d,
+                 smoothing_method = "spline",
                  tuning_para_seq = c(0, exp(-15:10)),
                  alpha = 0.05,
-                 max_comp = 500,
+                 max_clusters = 500,
                  epsilon = 0.05,
                  max_iter = 100,
                  verbose = TRUE,
@@ -82,30 +84,25 @@ lpme <- function(df,
                  increase_threshold = 1.05,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
-  time_points <- unique(df[, 1])
+  time_points <- unique(data[, 1])
 
-  initialization <- initialize_lpme(df, init, time_points, d, alpha, max_comp)
-  init_pme_list <- fit_init_pmes(df, time_points, init, initialization, d)
-  spline_coef_list <- merge_spline_coefs(init_pme_list, d, time_points)
+  initialization <- initialize_lpme(data, init, time_points, d, alpha, max_clusters)
+  init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d)
+  splines <- merge_spline_coefs(init_pme_list, d, time_points)
 
-  coef_full <- spline_coef_list$coef_full
-  x_test <- spline_coef_list$x_test
-  r_full <- spline_coef_list$r_full
-  r_full2 <- spline_coef_list$r_full2
-  n_knots <- spline_coef_list$n_knots
-  lambda <- spline_coef_list$lambda
+  spline_coefficients <- splines$coef_full
+  x_merged <- splines$x_test
+  params <- splines$params
+  times <- splines$times
+  n_knots <- splines$n_knots
+  lambda <- splines$lambda
 
-  D_coef <- dim(coef_full)[2]
-  D_new <- dim(x_test)[2] - 1
-  D_new2 <- dim(x_test)[2]
-  d_new <- dim(r_full)[2]
-  d_new2 <- dim(r_full2)[2]
-  n <- dim(x_test)[1]
-  gamma <- 4 - d_new
-  gamma2 <- 4 - d_new2
-  X_new <- x_test
+  D_coef <- dim(spline_coefficients)[2]
+  D_out <- dim(x_merged)[2]
+  d <- dim(params)[2]
+  n <- dim(x_merged)[1]
   I_new <- n
-  t_initial <- r_full %>%
+  t_initial <- params %>%
     as.matrix()
 
   MSE_seq_new <- vector()
@@ -120,68 +117,89 @@ lpme <- function(df,
   weights <- inv_errors / sum(inv_errors)
 
   for (tuning_ind in 1:length(tuning_para_seq)) {
-    f_coef_list <- compute_f_coef(
-      tuning_para_seq[tuning_ind],
-      diag(weights),
-      t_initial,
-      r_full2,
-      coef_full,
-      d_new2,
-      D_coef,
-      gamma,
-      gamma2
-    )
+    if (smoothing_method == "spline") {
+      f_coef_list <- compute_f_coef(
+        tuning_para_seq[tuning_ind],
+        diag(weights),
+        t_initial,
+        times,
+        spline_coefficients,
+        1,
+        D_coef,
+        4 - d,
+        3
+      )
 
-    f_new <- function(t) {
-      coefs <- f_coef_list$f(t[1])
-      coef_mat <- matrix(coefs, n_knots + d_new + 1, byrow = TRUE)
-      return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, gamma) +
-        t(coef_mat[(n_knots + 1):(n_knots + d_new + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
-      c(t[1], return_vec)
+      f_new <- function(t) {
+        coefs <- f_coef_list$f(t[1])
+        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        c(t[1], return_vec)
+      }
+    } else if (smoothing_method == "gp") {
+      gp <- GPFDA::gpr(
+        response = spline_coefficients,
+        input = times,
+        Cov = "matern",
+      )
+
+      f_new <- function(t) {
+        coefs <- gprPredict(
+          train = gp,
+          inputNew = t[1],
+          noiseFreePred = TRUE
+        )$pred.mean %>%
+          as.vector()
+        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        c(t[1], return_vec)
+      }
     }
 
     updated_param <- update_parameterization(
-      time_points,
+     time_points,
       t_initial,
-      X_new,
+      x_merged,
       f_new,
       n_knots,
       d,
-      d_new,
-      gamma
+      d,
+      4 - d
     )
 
     if (print_plots == TRUE) {
-      plot_lpme(df, f_new, t_initial, d_new, D_new, time_points)
+      plot_lpme(data, f_new, t_initial, d, D_out - 1, time_points)
     }
 
     # Cross-validation section
-    nearest_x <- calc_nearest_x(df, x_test)
-    init_param <- calc_init_param(df, updated_param$parameterization, nearest_x)
+    nearest_x <- calc_nearest_x(data, x_merged)
+    init_param <- calc_init_param(data, updated_param$parameterization, nearest_x)
 
     cv_mse <- calc_mse_cv(
       leave_one_out = TRUE,
       f = f_new,
-      df = df,
+      df = data,
       init_param = init_param,
       time_points = time_points,
       r = updated_param$parameterization[, -1],
       r_initial = t_initial,
       n_knots = n_knots,
       d = d,
-      d_new = d_new,
-      d_new2 = d_new2,
-      D_new = D_new,
+      d_new2 = 1,
+      D_out = D_out - 1,
       D_coef = D_coef,
       lambda = lambda,
-      gamma = gamma,
-      gamma2 = gamma2,
-      r_full2 = r_full2,
-      w = tuning_para_seq[tuning_ind]
+      gamma = 4 - d,
+      gamma2 = 3,
+      r_full2 = times,
+      w = tuning_para_seq[tuning_ind],
+      smoothing_method = smoothing_method
     )
 
-    df_n <- sapply(time_points, function(x) nrow(df[df[, 1] == x, ]))
-    MSE_new <- stats::weighted.mean(cv_mse, df_n)
+    data_n <- sapply(time_points, function(x) nrow(data[data[, 1] == x, ]))
+    MSE_new <- stats::weighted.mean(cv_mse, data_n)
     MSE_seq_new[tuning_ind] <- MSE_new
 
     if (verbose == TRUE) {
@@ -190,7 +208,7 @@ lpme <- function(df,
 
     SOL_coef[[tuning_ind]] <- f_coef_list$sol
     TNEW_new[[tuning_ind]] <- updated_param$parameterization
-    coefs[[tuning_ind]] <- r_full
+    coefs[[tuning_ind]] <- params
     x_funs[[tuning_ind]] <- updated_param$embedding
     functions[[tuning_ind]] <- f_new
     func_coef[[tuning_ind]] <- f_coef_list$f
@@ -212,11 +230,11 @@ lpme <- function(df,
     times = as.vector(time_points),
     r_init = t_initial,
     r_fit = t_new_opt,
-    d = d_new,
-    D = D_new2,
+    d = d,
+    D = D_out,
     n_knots = n_knots,
     lambda = lambda,
-    gamma = gamma,
+    gamma = 4 - d,
     sol_coef_list = SOL_coef,
     r_fit_list = TNEW_new
   )
@@ -303,7 +321,7 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
       W = init_W,
       X = init_X,
       I = init_I,
-      param = init_isomap
+      isomap = init_isomap
     )
     return(init_list)
   } else {
@@ -311,48 +329,41 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
   }
 }
 
-fit_init_pmes <- function(df, time_points, init, initialization, d) {
+fit_init_pmes <- function(df, time_points, init_option, init, d) {
   pme_results <- list()
-  pme_coefs <- list()
-  pme_coefs2 <- list()
+  kernel_coefs <- list()
+  polynomial_coefs <- list()
   funcs <- list()
   clusters <- list()
   centers <- list()
-  x_test <- list()
-  r <- list()
-  r2 <- list()
+  embeddings <- list()
+  params <- list()
+  times <- list()
   num_clusters <- rep(0, length(time_points))
   errors <- vector()
 
-  init_timevals <- initialization$timevals
-  init_theta_hat <- initialization$theta_hat
-  init_clusters <- initialization$clusters
-  init_centers <- initialization$centers
-  init_sigma <- initialization$sigma
-  init_isomap <- initialization$param
-
   for (idx in 1:length(time_points)) {
     df_temp <- df[df[, 1] == time_points[idx], ]
-    if (init %in% c("first", "full")) {
+    if (init_option %in% c("first", "full")) {
       pme_results[[idx]] <- pme(
-        x_obs = df_temp[, -1],
+        data = df_temp[, -1],
         d = d,
-        tuning_para_seq = exp(-20:10),
+        lambda = exp(-20:10),
         initialization = list(
           parameterization = matrix(
-            init_isomap$points[init_timevals == time_points[idx], ],
-            nrow = length(init_theta_hat[init_timevals == time_points[idx]])
+            init$isomap$points[init$timevals == time_points[idx], ],
+            nrow = length(init$theta_hat[init$timevals == time_points[idx]])
           ),
-          theta_hat = init_theta_hat[init_timevals == time_points[idx]],
-          centers = init_centers[init_timevals == time_points[idx], ],
-          sigma = init_sigma[idx],
-          km = init_clusters[[idx]]
+          theta_hat = init$theta_hat[init$timevals == time_points[idx]],
+          centers = init$centers[init$timevals == time_points[idx], ],
+          sigma = init$sigma[idx],
+          km = init$clusters[[idx]]
         ),
         verbose = FALSE
       )
     } else {
       pme_results[[idx]] <- pme(
-        x_obs = df_temp[, -1],
+        data = df_temp[, -1],
         d = d,
         verbose = FALSE
       )
@@ -367,31 +378,31 @@ fit_init_pmes <- function(df, time_points, init, initialization, d) {
     } else {
       clusters[[idx]] <- pme_results[[idx]]$knots$cluster + sum(num_clusters)
     }
-    pme_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][1:num_clusters[idx], ]
-    pme_coefs2[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][(num_clusters[idx] + 1):(num_clusters[idx] + d + 2), ] %>%
+    kernel_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][1:num_clusters[idx], ]
+    polynomial_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][(num_clusters[idx] + 1):(num_clusters[idx] + d + 2), ] %>%
       t() %>%
       matrix(nrow = 1)
-    x_test[[idx]] <- apply(
-      pme_results[[idx]]$params[[opt_run]],
+    embeddings[[idx]] <- apply(
+      pme_results[[idx]]$parameterization[[opt_run]],
       1,
       funcs[[idx]]
     ) %>%
       t()
-    r[[idx]] <- pme_results[[idx]]$params[[opt_run]]
-    r2[[idx]] <- time_points[idx]
+    params[[idx]] <- pme_results[[idx]]$parameterization[[opt_run]]
+    times[[idx]] <- time_points[idx]
     errors[idx] <- pme_results[[idx]]$MSD[opt_run]
   }
 
   init_pme_list <- list(
     pme_results = pme_results,
-    pme_coefs = pme_coefs,
-    pme_coefs2 = pme_coefs2,
+    kernel_coefs = kernel_coefs,
+    polynomial_coefs = polynomial_coefs,
     funcs = funcs,
     clusters = clusters,
     centers = centers,
-    x_test = x_test,
-    r = r,
-    r2 = r2,
+    embeddings = embeddings,
+    params = params,
+    times = times,
     num_clusters = num_clusters,
     errors = errors
   )
@@ -402,28 +413,27 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
   lambda <- vector()
   x_vals <- list()
   spline_coefs <- list()
-  gamma <- 4 - d
 
-  r_full <- purrr::reduce(pme_list$r, rbind)
-  length_r <- ceiling(max(pme_list$num_clusters)^(1 / d))
-  r_full <- gen_parameterization(r_full, ceiling(max(pme_list$num_clusters)), d)
-  n_knots <- nrow(r_full)
-  r_full2 <- purrr::reduce(pme_list$r2, rbind)
+  params <- purrr::reduce(pme_list$params, rbind)
+  length_param <- ceiling(max(pme_list$num_clusters)^(1 / d))
+  params <- gen_parameterization(params, ceiling(max(pme_list$num_clusters)), d)
+  n_knots <- nrow(params)
+  times <- purrr::reduce(pme_list$times, rbind)
 
   for (time_idx in 1:length(time_points)) {
     lambda[time_idx] <- pme_list$pme_results[[time_idx]]$tuning
     f <- pme_list$funcs[[time_idx]]
     output <- purrr::map(
       1:n_knots,
-      ~ f(r_full[.x, ])
+      ~ f(params[.x, ])
     ) %>%
       purrr::reduce(rbind)
     x_vals[[time_idx]] <- cbind(time_points[time_idx], output)
 
-    R <- cbind(rep(1, n_knots), r_full)
-    E <- calcE(r_full, gamma)
+    R <- cbind(rep(1, n_knots), params)
+    E <- calcE(params, 4 - d)
 
-    spline_coefs[[time_idx]] <- solve_spline(E, R, output, lambda[time_idx], ncol(r_full), ncol(output)) %>%
+    spline_coefs[[time_idx]] <- solve_spline(E, R, output, lambda[time_idx], ncol(params), ncol(output)) %>%
       t() %>%
       matrix(nrow = 1)
   }
@@ -431,8 +441,8 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
   x_test <- purrr::reduce(x_vals, rbind)
 
   out_list <- list(
-    r_full = r_full,
-    r_full2 = r_full2,
+    params = params,
+    times = times,
     coef_full = coef_full,
     x_test = x_test,
     n_knots = n_knots,
@@ -579,7 +589,7 @@ update_parameterization <- function(time_points, r, X, f, n_knots, d, d2, gamma)
   )
 }
 
-calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_initial, n_knots, d, d_new, d_new2, D_new, D_coef, lambda, gamma, gamma2, r_full2, w) {
+calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_initial, n_knots, d, d_new, d_new2, D_out, D_coef, lambda, gamma, gamma2, r_full2, w, smoothing_method) {
   if (leave_one_out == TRUE) {
     k <- length(time_points)
     folds <- sample(
@@ -608,45 +618,63 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         R,
         x_vals[x_vals[, 1] == fold_times[idx], -1],
         lambda[folds != fold_idx][idx],
-        d_new,
-        D_new
+        d,
+        D_out
       ) %>%
         t() %>%
         matrix(nrow = 1)
     }
     coef_cv <- purrr::reduce(spline_coefs, rbind)
-    r_cv <- matrix(
-      r_full2[r_full2[, 1] %in% fold_times, ],
-      ncol = 1
-    )
 
-    temp_param_cv <- cbind(rep(1, nrow(r_full2)), r_full2)
-    E_cv <- calcE(r_cv, gamma2)
-    param_cv <- temp_param_cv[temp_param_cv[, 2] %in% fold_times, ]
-
-    sol_coef_cv <- solve_spline(
-      E_cv,
-      param_cv,
-      coef_cv,
-      w,
-      d_new2,
-      D_coef
-    )
-
-    f_coef_cv <- function(t) {
-      return_vec <- as.vector(
-        t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
-          t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+    if (smoothing_method == "spline") {
+      r_cv <- matrix(
+        r_full2[r_full2[, 1] %in% fold_times, ],
+        ncol = 1
       )
-      return_vec
-    }
 
-    f_new_cv <- function(t) {
-      coefs <- f_coef_cv(t[1])
-      coef_mat <- matrix(coefs, n_knots + d_new + 1, byrow = TRUE)
-      return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, gamma) +
-        t(coef_mat[(n_knots + 1):(n_knots + d_new + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
-      return(c(t[1], return_vec))
+      temp_param_cv <- cbind(rep(1, nrow(r_full2)), r_full2)
+      E_cv <- calcE(r_cv, gamma2)
+      param_cv <- temp_param_cv[temp_param_cv[, 2] %in% fold_times, ]
+
+      sol_coef_cv <- solve_spline(
+        E_cv,
+        param_cv,
+        coef_cv,
+        w,
+        1,
+        D_coef
+      )
+
+      f_coef_cv <- function(t) {
+        return_vec <- as.vector(
+          t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
+            t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + 1 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+        )
+        return_vec
+      }
+
+      f_new_cv <- function(t) {
+        coefs <- f_coef_cv(t[1])
+        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, gamma) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        return(c(t[1], return_vec))
+      }
+    } else if (smoothing_method == "gp") {
+      gp <- GPFDA::gpr(
+        response = coef_cv,
+        input = fold_times,
+        Cov = "matern",
+      )
+
+      f_new_cv <- function(t) {
+        coefs <- gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
+          as.vector()
+        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        c(t[1], return_vec)
+      }
     }
 
     temp_df <- df[!(df[, 1] %in% fold_times), ]
