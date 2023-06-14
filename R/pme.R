@@ -23,8 +23,7 @@
 #' x <- sin(r) + rnorm(1000, mean = 0, sd = 0.25)
 #' mat <- cbind(r, x)
 #' out <- pme(mat, d = 1)
-pme <- function(
-    data,
+pme <- function(data,
     d,
     initialization = NULL,
     lambda = exp(-15:5),
