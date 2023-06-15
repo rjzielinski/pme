@@ -142,6 +142,7 @@ lpme <- function(data,
         response = spline_coefficients,
         input = times,
         Cov = "matern",
+        meanModel = 1
       )
 
       f_new <- function(t) {
@@ -665,6 +666,7 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         response = coef_cv,
         input = fold_times,
         Cov = "matern",
+        meanModel = 1
       )
 
       f_new_cv <- function(t) {
