@@ -5,30 +5,33 @@
 \title{Create New LPME Object}
 \usage{
 new_lpme(
+  embedding_map,
   msd,
-  sol_coef,
+  coefficients,
   times,
-  r_init,
-  r_fit,
+  initial_parameterization,
+  optimal_parameterization,
   d,
   D,
   n_knots,
   lambda,
   gamma,
-  sol_coef_list,
-  r_fit_list
+  coefficient_list,
+  parameterization_list
 )
 }
 \arguments{
+\item{embedding_map}{The optimal embedding function.}
+
 \item{msd}{Vector of Mean Squared Distance Values.}
 
-\item{sol_coef}{A value.}
+\item{coefficients}{sol_coef.}
 
 \item{times}{A value.}
 
-\item{r_init}{A value.}
+\item{initial_parameterization}{A value.}
 
-\item{r_fit}{A value.}
+\item{optimal_parameterization}{A value.}
 
 \item{d}{A value.}
 
@@ -40,9 +43,9 @@ new_lpme(
 
 \item{gamma}{A value.}
 
-\item{sol_coef_list}{A value.}
+\item{coefficient_list}{A value.}
 
-\item{r_fit_list}{A value.}
+\item{parameterization_list}{A value.}
 }
 \value{
 An object with class "lpme".

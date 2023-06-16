@@ -5,11 +5,12 @@
 \title{Fit an LPME Object}
 \usage{
 lpme(
-  df,
+  data,
   d,
+  smoothing_method = "spline",
   tuning_para_seq = c(0, exp(-15:10)),
   alpha = 0.05,
-  max_comp = 500,
+  max_clusters = 500,
   epsilon = 0.05,
   max_iter = 100,
   verbose = TRUE,
@@ -19,15 +20,17 @@ lpme(
 )
 }
 \arguments{
-\item{df}{A numeric matrix of data.}
+\item{data}{A numeric matrix of data.}
 
 \item{d}{The intrinsic dimension of the data.}
+
+\item{smoothing_method}{The approach taken to smoothing over PME coefficients.}
 
 \item{tuning_para_seq}{A vector of numeric smoothing parameter values.}
 
 \item{alpha}{A value.}
 
-\item{max_comp}{The maximum number of clusters identified in the data.}
+\item{max_clusters}{The maximum number of clusters identified in the data.}
 
 \item{epsilon}{A value.}
 
