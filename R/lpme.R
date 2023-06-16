@@ -1,45 +1,48 @@
 #' Create New LPME Object
 #'
+#' @param embedding_map The optimal embedding function.
 #' @param msd Vector of Mean Squared Distance Values.
-#' @param sol_coef sol_coef.
+#' @param coefficients sol_coef.
 #' @param times A value.
-#' @param r_init A value.
-#' @param r_fit A value.
+#' @param initial_parameterization A value.
+#' @param optimal_parameterization A value.
 #' @param d A value.
 #' @param D A value.
 #' @param n_knots A value.
 #' @param lambda A value.
 #' @param gamma A value.
-#' @param sol_coef_list A value.
-#' @param r_fit_list A value.
+#' @param coefficient_list A value.
+#' @param parameterization_list A value.
 #'
 #' @return An object with class "lpme".
 #' @export
-new_lpme <- function(msd,
-                     sol_coef,
+new_lpme <- function(embedding_map,
+                     msd,
+                     coefficients,
                      times,
-                     r_init,
-                     r_fit,
+                     initial_parameterization,
+                     optimal_parameterization,
                      d,
                      D,
                      n_knots,
                      lambda,
                      gamma,
-                     sol_coef_list,
-                     r_fit_list) {
+                     coefficient_list,
+                     parameterization_list) {
   lpme_list <- list(
+    embedding_map = embedding_map,
     d = d,
     D = D,
     lambda = lambda,
     gamma = gamma,
     times = times,
     n_knots = n_knots,
-    r_init = r_init,
-    r_fit = r_fit,
-    sol_coef = sol_coef,
+    initial_parameterization = initial_parameterization,
+    optimal_parameterization = optimal_parameterization,
+    sol_coef = coefficients,
     msd = msd,
-    sol_coef_list = sol_coef_list,
-    r_fit_list = r_fit_list
+    sol_coef_list = coefficient_list,
+    parameterization_list = parameterization_list
   )
   vctrs::new_vctr(lpme_list, class = "lpme")
 }
@@ -146,7 +149,7 @@ lpme <- function(data,
       )
 
       f_new <- function(t) {
-        coefs <- gprPredict(
+        coefs <- GPFDA::gprPredict(
           train = gp,
           inputNew = t[1],
           noiseFreePred = TRUE
@@ -226,23 +229,32 @@ lpme <- function(data,
   }
 
   lpme_out <- new_lpme(
+    embedding_map = f.optimal,
     msd = MSE_seq_new,
-    sol_coef = sol_opt,
+    coefficients = sol_opt,
     times = as.vector(time_points),
-    r_init = t_initial,
-    r_fit = t_new_opt,
+    initial_parameterization = t_initial,
+    optimal_parameterization = t_new_opt,
     d = d,
     D = D_out,
     n_knots = n_knots,
     lambda = lambda,
-    gamma = 4 - d,
-    sol_coef_list = SOL_coef,
-    r_fit_list = TNEW_new
+    gamma = tuning_para_seq,
+    coefficient_list = SOL_coef,
+    parameterization_list = TNEW_new
   )
 
   lpme_out
 }
 
+#' Embed Low-Dimensional Parameterization in High-Dimensional Space
+#'
+#' @param object An object of class `lpme`.
+#' @param x A value
+#'
+#' @return A value
+#' @export
+#'
 embed <- function(object, x) {
   n_times <- length(object$times)
   nu <- 4 - object$d
@@ -670,10 +682,10 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
       )
 
       f_new_cv <- function(t) {
-        coefs <- gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
+        coefs <- GPFDA::gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
           as.vector()
         coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
-        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
+        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, 4 - d) +
           t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
         c(t[1], return_vec)
       }
