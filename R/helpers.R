@@ -83,13 +83,24 @@ solve_spline <- function(E, t_val, X, w, d, D) {
 #' @param initial_guess Guess of the parameterization.
 #'
 #' @return A vector describing the data point in low-dimensional space.
-#'
-#' @noRd
+#' @export
 projection_pme <- function(x, f, initial_guess) {
   est <- stats::nlm(function(t) dist_euclidean(x = x, f(t)), p = initial_guess)
   est$estimate
 }
 
+
+#' Project onto Low-Dimensional Manifold
+#'
+#' @param x A value
+#' @param f A value
+#' @param initial_guess A value
+#' @param n_knots A value
+#' @param d_new A value
+#' @param gamma A value
+#'
+#' @return A value
+#' @export
 projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
   nlm_est <- try(
     stats::nlm(
