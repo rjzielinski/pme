@@ -13,6 +13,7 @@
 #' @param gamma A value.
 #' @param coefficient_list A value.
 #' @param parameterization_list A value.
+#' @param smoothing_method A value.
 #'
 #' @return An object with class "lpme".
 #' @export
@@ -28,7 +29,8 @@ new_lpme <- function(embedding_map,
                      lambda,
                      gamma,
                      coefficient_list,
-                     parameterization_list) {
+                     parameterization_list,
+                     smoothing_method) {
   lpme_list <- list(
     embedding_map = embedding_map,
     d = d,
@@ -42,7 +44,8 @@ new_lpme <- function(embedding_map,
     sol_coef = coefficients,
     msd = msd,
     sol_coef_list = coefficient_list,
-    parameterization_list = parameterization_list
+    parameterization_list = parameterization_list,
+    smoothing_method = smoothing_method
   )
   vctrs::new_vctr(lpme_list, class = "lpme")
 }
@@ -88,6 +91,9 @@ lpme <- function(data,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
+  if (smoothing_method == "gp") {
+    tuning_para_seq <- 0:25 + 0.5
+  }
 
   initialization <- initialize_lpme(data, init, time_points, d, alpha, max_clusters)
   init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d)
@@ -145,7 +151,8 @@ lpme <- function(data,
         response = spline_coefficients,
         input = times,
         Cov = "matern",
-        meanModel = 1
+        meanModel = "t",
+        nu = tuning_para_seq[tuning_ind]
       )
 
       f_new <- function(t) {
@@ -241,7 +248,8 @@ lpme <- function(data,
     lambda = lambda,
     gamma = tuning_para_seq,
     coefficient_list = SOL_coef,
-    parameterization_list = TNEW_new
+    parameterization_list = TNEW_new,
+    smoothing_method = smoothing_method
   )
 
   lpme_out
@@ -678,7 +686,8 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         response = coef_cv,
         input = fold_times,
         Cov = "matern",
-        meanModel = 1
+        meanModel = "t",
+        nu = w
       )
 
       f_new_cv <- function(t) {

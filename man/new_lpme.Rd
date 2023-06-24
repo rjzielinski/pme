@@ -17,7 +17,8 @@ new_lpme(
   lambda,
   gamma,
   coefficient_list,
-  parameterization_list
+  parameterization_list,
+  smoothing_method
 )
 }
 \arguments{
@@ -46,6 +47,8 @@ new_lpme(
 \item{coefficient_list}{A value.}
 
 \item{parameterization_list}{A value.}
+
+\item{smoothing_method}{A value.}
 }
 \value{
 An object with class "lpme".
