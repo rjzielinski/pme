@@ -80,7 +80,7 @@ is_lpme <- function(x) {
 lpme <- function(data,
                  d,
                  smoothing_method = "spline",
-                 tuning_para_seq = c(0, exp(-15:10)),
+                 tuning_para_seq = NULL,
                  alpha = 0.05,
                  max_clusters = 500,
                  epsilon = 0.05,
@@ -97,9 +97,6 @@ lpme <- function(data,
     } else if (smoothing_method == "gp") {
       tuning_para_seq <- 0:10 + 0.5
     }
-  }
-  if (smoothing_method == "gp") {
-    tuning_para_seq <- 0:25 + 0.5
   }
 
   initialization <- initialize_lpme(data, init, time_points, d, alpha, max_clusters)
