@@ -147,15 +147,17 @@ lpme <- function(data,
         c(t[1], return_vec)
       }
     } else if (smoothing_method == "gp") {
-      gp <- GPFDA::gpr(
-        response = spline_coefficients,
-        input = times,
-        Cov = "matern",
-        meanModel = "t",
-        nu = tuning_para_seq[tuning_ind]
-      ) %>%
-        suppressMessages() %>%
-        suppressWarnings()
+      invisible(
+        capture.output({
+          gp <- GPFDA::gpr(
+            response = spline_coefficients,
+            input = times,
+            Cov = "matern",
+            meanModel = "t",
+            nu = tuning_para_seq[tuning_ind]
+          )
+        })
+      )
 
       f_new <- function(t) {
         coefs <- GPFDA::gprPredict(
@@ -692,15 +694,17 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         return(c(t[1], return_vec))
       }
     } else if (smoothing_method == "gp") {
-      gp <- GPFDA::gpr(
-        response = coef_cv,
-        input = fold_times,
-        Cov = "matern",
-        meanModel = "t",
-        nu = w
-      ) %>%
-        suppressMessages() %>%
-        suppressWarnings()
+      invisible(
+        capture.output({
+          gp <- GPFDA::gpr(
+            response = coef_cv,
+            input = fold_times,
+            Cov = "matern",
+            meanModel = "t",
+            nu = w
+          )
+        })
+      )
 
       f_new_cv <- function(t) {
         coefs <- GPFDA::gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
