@@ -217,12 +217,20 @@ lpme <- function(data,
       print_mse(tuning_para_seq[tuning_ind], MSE_new)
     }
 
-    SOL_coef[[tuning_ind]] <- f_coef_list$sol
+    SOL_coef[[tuning_ind]] <- ifelse(
+      smoothing_method == "spline",
+      f_coef_list$sol,
+      NA
+    )
     TNEW_new[[tuning_ind]] <- updated_param$parameterization
     coefs[[tuning_ind]] <- params
     x_funs[[tuning_ind]] <- updated_param$embedding
     functions[[tuning_ind]] <- f_new
-    func_coef[[tuning_ind]] <- f_coef_list$f
+    func_coef[[tuning_ind]] <- ifelse(
+      smoothing_method == "spline",
+      f_coef_list$f,
+      NA
+    )
   }
 
   optimal_ind <- min(which(MSE_seq_new == min(MSE_seq_new)))
