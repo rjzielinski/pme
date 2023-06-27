@@ -91,6 +91,13 @@ lpme <- function(data,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
+  if (is.null(tuning_para_seq)) {
+    if (smoothing_method == "spline") {
+      tuning_para_seq <- c(0, exp(-15:10))
+    } else if (smoothing_method == "gp") {
+      tuning_para_seq <- 0:10 + 0.5
+    }
+  }
   if (smoothing_method == "gp") {
     tuning_para_seq <- 0:25 + 0.5
   }
