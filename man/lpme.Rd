@@ -8,7 +8,7 @@ lpme(
   data,
   d,
   smoothing_method = "spline",
-  tuning_para_seq = c(0, exp(-15:10)),
+  tuning_para_seq = NULL,
   alpha = 0.05,
   max_clusters = 500,
   epsilon = 0.05,
