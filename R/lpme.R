@@ -153,7 +153,8 @@ lpme <- function(data,
         Cov = "matern",
         meanModel = "t",
         nu = tuning_para_seq[tuning_ind]
-      )
+      ) %>%
+        suppressMessages()
 
       f_new <- function(t) {
         coefs <- GPFDA::gprPredict(
@@ -696,7 +697,8 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         Cov = "matern",
         meanModel = "t",
         nu = w
-      )
+      ) %>%
+        suppressMessages()
 
       f_new_cv <- function(t) {
         coefs <- GPFDA::gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
