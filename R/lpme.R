@@ -151,30 +151,30 @@ lpme <- function(data,
         c(t[1], return_vec)
       }
     } else if (smoothing_method == "gp") {
-      invisible(
-        capture.output({
-          gp <- GPFDA::gpr(
-            response = spline_coefficients,
-            input = times,
-            Cov = "matern",
-            meanModel = "t",
-            nu = tuning_para_seq[tuning_ind]
-          )
-        })
-      )
-
-      f_new <- function(t) {
-        coefs <- GPFDA::gprPredict(
-          train = gp,
-          inputNew = t[1],
-          noiseFreePred = TRUE
-        )$pred.mean %>%
-          as.vector()
-        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
-        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
-        c(t[1], return_vec)
-      }
+      # invisible(
+      #   capture.output({
+      #     gp <- GPFDA::gpr(
+      #       response = spline_coefficients,
+      #       input = times,
+      #       Cov = "matern",
+      #       meanModel = "t",
+      #       nu = tuning_para_seq[tuning_ind]
+      #     )
+      #   })
+      # )
+      #
+      # f_new <- function(t) {
+      #   coefs <- GPFDA::gprPredict(
+      #     train = gp,
+      #     inputNew = t[1],
+      #     noiseFreePred = TRUE
+      #   )$pred.mean %>%
+      #     as.vector()
+      #   coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+      #   return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
+      #     t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+      #   c(t[1], return_vec)
+      # }
     }
 
     updated_param <- update_parameterization(
@@ -698,26 +698,26 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
         return(c(t[1], return_vec))
       }
     } else if (smoothing_method == "gp") {
-      invisible(
-        capture.output({
-          gp <- GPFDA::gpr(
-            response = coef_cv,
-            input = fold_times,
-            Cov = "matern",
-            meanModel = "t",
-            nu = w
-          )
-        })
-      )
-
-      f_new_cv <- function(t) {
-        coefs <- GPFDA::gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
-          as.vector()
-        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
-        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, 4 - d) +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
-        c(t[1], return_vec)
-      }
+      # invisible(
+      #   capture.output({
+      #     gp <- GPFDA::gpr(
+      #       response = coef_cv,
+      #       input = fold_times,
+      #       Cov = "matern",
+      #       meanModel = "t",
+      #       nu = w
+      #     )
+      #   })
+      # )
+      #
+      # f_new_cv <- function(t) {
+      #   coefs <- GPFDA::gprPredict(train = gp, inputNew = t[1], noiseFreePred = TRUE)$pred.mean %>%
+      #     as.vector()
+      #   coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+      #   return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, 4 - d) +
+      #     t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+      #   c(t[1], return_vec)
+      # }
     }
 
     temp_df <- df[!(df[, 1] %in% fold_times), ]

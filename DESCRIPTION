@@ -13,7 +13,6 @@ LinkingTo:
     RcppArmadillo
 Imports: 
     ggplot2,
-    GPFDA,
     magrittr,
     MASS,
     nloptr,
