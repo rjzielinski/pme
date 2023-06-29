@@ -17,6 +17,7 @@ using namespace std;
 //' @param x A numeric vector of values.
 //'
 //' @return A numeric value.
+//' @export
 // [[Rcpp::export]]
 double norm_euclidean(arma::vec x) {
   return arma::norm(x, 2);

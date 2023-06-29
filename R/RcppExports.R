@@ -9,6 +9,7 @@
 #' @param x A numeric vector of values.
 #'
 #' @return A numeric value.
+#' @export
 norm_euclidean <- function(x) {
     .Call(`_pme_norm_euclidean`, x)
 }
