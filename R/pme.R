@@ -35,6 +35,7 @@ pme <- function(data,
     SSD_ratio_threshold = 10,
     print_plots = FALSE,
     verbose = FALSE) {
+
   # Initial variable assignments --------------------------
   n <- dim(data)[1]
   D <- dim(data)[2]
@@ -46,13 +47,7 @@ pme <- function(data,
     max_clusters <- 2 * min_clusters
   }
 
-  mse <- vector()
-  coefs <- list()
-  parameterization <- list()
-  embeddings <- list()
-
   # Initialization ----------------------------------------
-
   if (is.null(initialization)) {
     initialization <- initialize_pme(data, d, min_clusters, alpha, max_clusters)
   }
@@ -60,7 +55,11 @@ pme <- function(data,
   X <- initialization$centers
   I <- length(initialization$theta_hat)
 
-  # Fitting
+  mse <- vector()
+  coefs <- list()
+  parameterization <- list()
+  embeddings <- list()
+
   for (tuning_idx in 1:length(lambda)) {
     spline_coefs <- calc_coefficients(
       X,
@@ -69,25 +68,35 @@ pme <- function(data,
       lambda[tuning_idx]
     )
 
+    params <- initialization$parameterization
+
     f_embedding <- function(parameters) {
       as.vector(
-        (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, initialization$parameterization, 4 - d)) +
+        (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
           (t(spline_coefs[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
       )
     }
 
-    params <- calc_params(f_embedding, X, initialization$parameterization)
+    f0 <- f_embedding
+
+    params <- calc_params(f_embedding, X, params)
+
     SSD <- calc_SSD(f_embedding, X, params)
 
     count <- 1
     SSD_ratio <- 10 * epsilon
 
-    while ((SSD_ratio > epsilon) && (SSD_ratio <= SSD_ratio_threshold) && (count <= max_iter)) {
-      SSD_old <- SSD
+    while ((SSD_ratio > epsilon) & (SSD_ratio <= 5) & (count <= (max_iter - 1))) {
+      SSD_prev <- SSD
       f0 <- f_embedding
       params_prev <- params
 
-      spline_coefs <- calc_coefficients(X, params, weights, lambda[tuning_idx])
+      spline_coefs <- calc_coefficients(
+        X,
+        params,
+        weights,
+        lambda[tuning_idx]
+      )
 
       f_embedding <- function(parameters) {
         as.vector(
@@ -96,10 +105,11 @@ pme <- function(data,
         )
       }
 
-      params <- calc_params(f_embedding, X, params_prev)
+      params <- calc_params(f_embedding, X, params)
+
       SSD <- calc_SSD(f_embedding, X, params)
 
-      SSD_ratio <- abs(SSD - SSD_old) / SSD_old
+      SSD_ratio <- abs(SSD - SSD_prev) / SSD_prev
       count <- count + 1
 
       if (verbose == TRUE) {
@@ -112,9 +122,13 @@ pme <- function(data,
     }
 
     mse[tuning_idx] <- calc_msd(data, initialization$km, f_embedding, params, D, d)
+    if (verbose == TRUE) {
+      print(paste("When lambda = ", as.character(lambda[tuning_idx]), ", MSD = ", as.character(MSE), "."))
+    }
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
     embeddings[[tuning_idx]] <- f_embedding
+
     if (tuning_idx >= 4) {
       if (!is.unsorted(mse[(tuning_idx - 3):tuning_idx])) {
         break
