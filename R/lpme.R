@@ -239,6 +239,12 @@ lpme <- function(data,
       f_coef_list$f,
       NA
     )
+
+    if (tuning_ind >= 6) {
+      if (!is.unsorted(MSE_seq_new[(tuning_ind - 5):tuning_ind])) {
+        break
+      }
+    }
   }
 
   optimal_ind <- min(which(MSE_seq_new == min(MSE_seq_new)))
