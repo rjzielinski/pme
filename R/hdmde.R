@@ -88,7 +88,6 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
 }
 
-
 # HDMDE HELPER FUNCTIONS -------------------------------------------------------
 
 
