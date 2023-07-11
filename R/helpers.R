@@ -86,9 +86,15 @@ solve_spline <- function(E, t_val, X, w, d, D) {
 #' @export
 projection_pme <- function(x, f, initial_guess) {
   est <- stats::nlm(function(t) dist_euclidean(x = x, f(t)), p = initial_guess)
+  # opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-10)
+  # est <- nloptr::nloptr(
+  #   x0 <- initial_guess,
+  #   function(t) dist_euclidean(x = x, f(t)),
+  #   opts = opts
+  # )
   est$estimate
+  # est$solution
 }
-
 
 #' Project onto Low-Dimensional Manifold
 #'
