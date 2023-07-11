@@ -32,7 +32,7 @@ pme <- function(data,
     max_clusters = 100,
     epsilon = 0.05,
     max_iter = 100,
-    SSD_ratio_threshold = 10,
+    SSD_ratio_threshold = 5,
     print_plots = FALSE,
     verbose = FALSE) {
 
@@ -86,10 +86,11 @@ pme <- function(data,
     count <- 1
     SSD_ratio <- 10 * epsilon
 
-    while ((SSD_ratio > epsilon) & (SSD_ratio <= 5) & (count <= (max_iter - 1))) {
+    while ((SSD_ratio > epsilon) & (SSD_ratio <= SSD_ratio_threshold) & (count <= (max_iter - 1))) {
       SSD_prev <- SSD
       f0 <- f_embedding
       params_prev <- params
+      coefs_prev <- spline_coefs
 
       spline_coefs <- calc_coefficients(
         X,
@@ -111,6 +112,12 @@ pme <- function(data,
 
       SSD_ratio <- abs(SSD - SSD_prev) / SSD_prev
       count <- count + 1
+
+      if (SSD_ratio > SSD_ratio_threshold) {
+        f_embedding <- f0
+        params <- params_prev
+        spline_coefs <- coefs_prev
+      }
 
       if (verbose == TRUE) {
         print_SSD(lambda[tuning_idx], SSD, SSD_ratio, count)
