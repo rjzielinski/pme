@@ -85,7 +85,12 @@ solve_spline <- function(E, t_val, X, w, d, D) {
 #' @return A vector describing the data point in low-dimensional space.
 #' @export
 projection_pme <- function(x, f, initial_guess) {
-  est <- stats::nlm(function(t) dist_euclidean(x = x, f(t)), p = initial_guess)
+  est <- stats::nlm(
+    function(t) dist_euclidean(x = x, f(t)),
+    p = initial_guess,
+    gradtol = 1e-10,
+    steptol = 1e-10
+  )
   # opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-10)
   # est <- nloptr::nloptr(
   #   x0 <- initial_guess,
