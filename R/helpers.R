@@ -90,7 +90,7 @@ projection_pme <- function(x, f, initial_guess) {
     p = initial_guess,
     gradtol = 1e-10,
     steptol = 1e-10,
-    iterlim = 100000
+    iterlim = 100000000
   )
   # opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-10)
   # est <- nloptr::nloptr(
