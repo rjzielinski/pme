@@ -130,7 +130,7 @@ pme <- function(data,
 
     mse[tuning_idx] <- calc_msd(data, initialization$km, f_embedding, params, D, d)
     if (verbose == TRUE) {
-      print(paste("When lambda = ", as.character(lambda[tuning_idx]), ", MSD = ", as.character(MSE), "."))
+      print(paste("When lambda = ", as.character(lambda[tuning_idx]), ", MSD = ", as.character(mse[tuning_idx]), "."))
     }
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
