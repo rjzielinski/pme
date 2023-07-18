@@ -88,10 +88,7 @@ projection_pme <- function(x, f, initial_guess) {
   nlm_est <- try(
     stats::nlm(
       function(t) dist_euclidean(x = x, f(t)),
-      p = initial_guess,
-      gradtol = 1e-10,
-      steptol = 1e-10,
-      iterlim = 1e10
+      p = initial_guess
     ),
     silent = TRUE
   )
