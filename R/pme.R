@@ -113,17 +113,20 @@ pme <- function(data,
       SSD_ratio <- abs(SSD - SSD_prev) / SSD_prev
       count <- count + 1
 
-      if (SSD_ratio > SSD_ratio_threshold) {
-        f_embedding <- f0
-        params <- params_prev
-        spline_coefs <- coefs_prev
-      }
+      # if (SSD_ratio > SSD_ratio_threshold) {
+      #   f_embedding <- f0
+      #   params <- params_prev
+      #   spline_coefs <- coefs_prev
+      #   break
+      # }
 
-      if (verbose == TRUE) {
-        print_SSD(lambda[tuning_idx], SSD, SSD_ratio, count)
-      }
+      # if (verbose == TRUE) {
+      #   print_SSD(lambda[tuning_idx], SSD, SSD_ratio, count)
+      # }
     }
 
+    print(paste0("SSD_ratio: ", as.character(round(SSD_ratio, 4))))
+    Sys.sleep(3)
     if (print_plots == TRUE) {
       plot_pme(f_embedding, data, X, spline_coefs, params, d)
     }
