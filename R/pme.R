@@ -135,7 +135,12 @@ pme <- function(data,
     }
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
-    embeddings[[tuning_idx]] <- f_embedding
+    embeddings[[tuning_idx]] <- function(parameters) {
+      as.vector(
+        (t(coefs[[tuning_idx]][1:I, ]) %*% etaFunc(parameters, parameterization[[tuning_idx]], 4 - d)) +
+          (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+      )
+    }
 
     if (tuning_idx >= 4) {
       if (!is.unsorted(mse[(tuning_idx - 3):tuning_idx])) {
@@ -147,6 +152,12 @@ pme <- function(data,
   optimal_idx <- min(which(mse == min(mse)))
   coefs_opt <- coefs[[optimal_idx]]
   params_opt <- parameterization[[optimal_idx]]
+  embedding_opt <- function(parameters) {
+    as.vector(
+      (t(coefs_opt[1:I, ]) %*% etaFunc(parameters, params_opt, 4 - d)) +
+        (t(coefs_opt[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+    )
+  }
 
   if (verbose == TRUE) {
     paste0(
@@ -159,7 +170,8 @@ pme <- function(data,
   }
 
   pme_out <- new_pme(
-    embedding_map = embeddings[[optimal_idx]],
+    # embedding_map = embeddings[[optimal_idx]],
+    embedding_map = embedding_opt,
     knots = initialization$km,
     knot_weights = initialization$theta_hat,
     kernel_coefs = coefs_opt[1:I, ],
