@@ -45,7 +45,9 @@ pme <- function(data,
   }
   if (min_clusters > max_clusters) {
     max_clusters <- 2 * min_clusters
-  }
+
+
+      }
 
   # Initialization ----------------------------------------
   if (is.null(initialization)) {
@@ -86,6 +88,10 @@ pme <- function(data,
     count <- 1
     SSD_ratio <- 10 * epsilon
 
+    if (print_plots == TRUE) {
+      plot_pme(f_embedding, data, X, spline_coefs, params, d)
+    }
+
     while ((SSD_ratio > epsilon) & (SSD_ratio <= SSD_ratio_threshold) & (count <= (max_iter - 1))) {
       SSD_prev <- SSD
       f0 <- f_embedding
@@ -112,6 +118,11 @@ pme <- function(data,
 
       SSD_ratio <- abs(SSD - SSD_prev) / SSD_prev
       count <- count + 1
+
+      if (print_plots == TRUE) {
+        plot_pme(f_embedding, data, X, spline_coefs, params, d)
+      }
+
 
       if (SSD_ratio > SSD_ratio_threshold) {
         f_embedding <- f0
@@ -276,7 +287,7 @@ initialize_pme <- function(x, d, min_clusters, alpha, max_clusters) {
   I <- length(theta_hat)
 
   dissimilarity <- as.matrix(stats::dist(X))
-  init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = 10)
+  init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
 
   list(
     parameterization = init_parameterization$points,
