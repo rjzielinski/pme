@@ -113,12 +113,12 @@ pme <- function(data,
       SSD_ratio <- abs(SSD - SSD_prev) / SSD_prev
       count <- count + 1
 
-      # if (SSD_ratio > SSD_ratio_threshold) {
-      #   f_embedding <- f0
-      #   params <- params_prev
-      #   spline_coefs <- coefs_prev
-      #   break
-      # }
+      if (SSD_ratio > SSD_ratio_threshold) {
+        f_embedding <- f0
+        params <- params_prev
+        spline_coefs <- coefs_prev
+        SSD <- SSD_prev
+      }
 
       if (verbose == TRUE) {
         print_SSD(lambda[tuning_idx], SSD, SSD_ratio, count)
@@ -445,8 +445,9 @@ plot_pme <- function(f, x, centers, sol, t, d) {
 #' @noRd
 calc_msd <- function(x, km, f, t, D, d) {
   data_initial <- matrix(0, nrow = 1, ncol = D + d)
+  center_order <- order(km$centers[, 1])
   for (i in 1:max(km$cluster)) {
-    index_temp <- which(km$cluster == i)
+    index_temp <- which(km$cluster == center_order[i])
     length_temp <- length(index_temp)
     temp_x <- matrix(x[index_temp, ], nrow = length_temp)
     t_temp <- matrix(rep(t[i, 1], length_temp))
