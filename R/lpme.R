@@ -240,7 +240,7 @@ lpme <- function(data,
       NA
     )
 
-    if (tuning_ind >= 6) {
+    if (tuning_ind >= 8) {
       if (!is.unsorted(MSE_seq_new[(tuning_ind - 5):tuning_ind])) {
         break
       }
