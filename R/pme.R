@@ -45,9 +45,7 @@ pme <- function(data,
   }
   if (min_clusters > max_clusters) {
     max_clusters <- 2 * min_clusters
-
-
-      }
+  }
 
   # Initialization ----------------------------------------
   if (is.null(initialization)) {
@@ -435,7 +433,8 @@ plot_pme <- function(f, x, centers, sol, t, d) {
         x = x[, 1],
         y = x[, 2],
         z = x[, 3],
-        opacity = 0.15
+        opacity = 0.15,
+        marker = list(size = 3)
       )
     print(plt)
   }
