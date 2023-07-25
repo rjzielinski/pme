@@ -322,14 +322,56 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
   if (init %in% c("first", "full")) {
     if (init == "first") {
       init_df <- df[df[, 1] == time_points[1], -1]
-      init_N0 <- 20 * ncol(init_df)
-      init_est <- hdmde(init_df, init_N0, alpha, max_comp)
-      init_est_order <- order(init_est$mu[, 1])
-      init_timevals <- rep(time_points[1], dim(init_est$mu)[1])
-      init_theta_hat <- init_est$theta_hat[init_est_order]
-      init_centers <- init_est$mu[init_est_order, ]
-      init_sigma <- init_est$sigma
-      init_clusters <- init_est$km
+      init_pme <- pme(init_df, d)
+      init_pme_center_order <- order(init_pme$knots$centers[, 1])
+      init_pme_centers <- init_pme$knots$centers[init_pme_center_order, ]
+
+      init_timevals <- list()
+      init_theta_hat <- list()
+      init_centers <- list()
+      init_sigma <- list()
+      init_clusters <- list()
+      init_parameterization <- list()
+      init_D <- ncol(df[, -1])
+      init_n <- nrow(df)
+      lambda <- 4 - d
+      init_N0 <- 20 * init_D
+
+      for (idx in 1:length(time_points)) {
+        init_df_temp <- df[df[, 1] == time_points[idx], -1]
+        init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
+        est_temp_order <- order(init_est_temp$mu[, 1])
+        init_timevals[[idx]] <- rep(time_points[idx], dim(init_est_temp$mu)[1])
+        init_theta_hat[[idx]] <- init_est_temp$theta_hat[est_temp_order]
+        init_centers[[idx]] <- init_est_temp$mu[est_temp_order, ]
+        init_sigma[[idx]] <- init_est_temp$sigma
+        init_clusters[[idx]] <- init_est_temp$km
+
+        nearest_clusters <- map(
+          1:nrow(init_centers[[idx]]),
+          ~ which.min(as.vector(apply(init_pme_centers, 1, dist_euclidean, y = init_centers[[idx]][.x, ])))
+        ) %>%
+          reduce(c)
+
+        opt_run <- which.min(init_pme$MSD)
+        params_init <- init_pme$parameterization[[opt_run]][nearest_clusters, ] %>%
+          matrix(nrow = nrow(init_centers[[idx]]), byrow = TRUE)
+
+        init_parameterization[[idx]] <- map(
+          1:nrow(init_centers[[idx]]),
+          ~ projection_pme(init_centers[[idx]][.x, ], init_pme$embedding_map, params_init[.x, ])
+        ) %>%
+          reduce(rbind)
+      }
+
+      init_list <- list(
+        timevals = init_timevals,
+        theta_hat = init_theta_hat,
+        centers = init_centers,
+        sigma = init_sigma,
+        clusters = init_clusters,
+        isomap = init_parameterization
+      )
     } else if (init == "full") {
       init_timevals <- list()
       init_theta_hat <- list()
@@ -357,30 +399,28 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
       init_theta_hat <- purrr::reduce(init_theta_hat, c)
       init_centers <- purrr::reduce(init_centers, rbind)
       init_sigma <- purrr::reduce(init_sigma, c)
+      init_W <- diag(init_theta_hat)
+      init_X <- init_centers
+      init_I <- length(init_theta_hat)
+
+      init_dissimilarity_matrix <- as.matrix(stats::dist(init_X))
+      init_isomap <- vegan::isomap(
+        init_dissimilarity_matrix,
+        ndim = d,
+        k = floor(sqrt(nrow(init_dissimilarity_matrix)))
+      )
+      init_list <- list(
+        timevals = init_timevals,
+        theta_hat = init_theta_hat,
+        centers = init_centers,
+        sigma = init_sigma,
+        clusters = init_clusters,
+        isomap = init_isomap
+      )
     }
 
-    init_W <- diag(init_theta_hat)
-    init_X <- init_centers
-    init_I <- length(init_theta_hat)
 
-    init_dissimilarity_matrix <- as.matrix(stats::dist(init_X))
-    init_isomap <- vegan::isomap(
-      init_dissimilarity_matrix,
-      ndim = d,
-      k = floor(sqrt(nrow(init_dissimilarity_matrix)))
-    )
 
-    init_list <- list(
-      timevals = init_timevals,
-      theta_hat = init_theta_hat,
-      centers = init_centers,
-      sigma = init_sigma,
-      clusters = init_clusters,
-      W = init_W,
-      X = init_X,
-      I = init_I,
-      isomap = init_isomap
-    )
     return(init_list)
   } else {
     print("Please choose `init` option 'first' or 'full'.")
@@ -426,11 +466,11 @@ fit_init_pmes <- function(df, time_points, init_option, init, d) {
         d = d,
         lambda = exp(-20:10),
         initialization = list(
-          parameterization = matrix(init$isomap$points, nrow = length(init$theta_hat)),
-          theta_hat = init$theta_hat,
-          centers = init$centers,
-          sigma = init$sigma,
-          km = init$clusters
+          parameterization = init$isomap[[idx]],
+          theta_hat = init$theta_hat[[idx]],
+          centers = init$centers[[idx]],
+          sigma = init$sigma[[idx]],
+          km = init$clusters[[idx]]
         ),
         verbose = FALSE,
         print_plots = FALSE
