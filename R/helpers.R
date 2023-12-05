@@ -14,6 +14,12 @@ smoothing_kernel <- function(x, mu, sigma) {
   return((sigma^(-length(x))) * prod(yseq))
 }
 
+log_smoothing_kernel <- function(x, mu, sigma) {
+  yseq <- stats::dnorm((x - mu) / sigma)
+  output <- (-length(x) * log(sigma)) + sum(yseq)
+  return(output)
+}
+
 #' Find the Coefficients of a Weighted Spline Function
 #'
 #' @param E A numeric matrix.

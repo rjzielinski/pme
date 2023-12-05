@@ -8,8 +8,12 @@ lpme(
   data,
   d,
   smoothing_method = "spline",
-  tuning_para_seq = NULL,
+  gamma = NULL,
+  lambda = NULL,
+  initialization_algorithm = "isomap",
+  init_type = "centers",
   alpha = 0.05,
+  min_clusters = 0,
   max_clusters = 500,
   epsilon = 0.05,
   max_iter = 100,
@@ -26,9 +30,17 @@ lpme(
 
 \item{smoothing_method}{The approach taken to smoothing over PME coefficients.}
 
-\item{tuning_para_seq}{A vector of numeric smoothing parameter values.}
+\item{gamma}{A vector of numeric smoothing parameter values.}
+
+\item{lambda}{A vector of numeric smoothing parameter values for the PME algorithm.}
+
+\item{initialization_algorithm}{A character value describing the algorithm used to obtain initial parameter values. Accepted values are "isomap", "diffusion_maps", and "laplacian_eigenmaps".}
+
+\item{init_type}{A character value describing whether initialization should use cluster centers or subsample from cluster values. Accepted values are "centers" or "subsampling".}
 
 \item{alpha}{A value.}
+
+\item{min_clusters}{The minimum number of clusters in the data.}
 
 \item{max_clusters}{The maximum number of clusters identified in the data.}
 

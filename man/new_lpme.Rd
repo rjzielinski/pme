@@ -18,7 +18,8 @@ new_lpme(
   gamma,
   coefficient_list,
   parameterization_list,
-  smoothing_method
+  smoothing_method,
+  initialization_algorithm
 )
 }
 \arguments{
@@ -26,29 +27,31 @@ new_lpme(
 
 \item{msd}{Vector of Mean Squared Distance Values.}
 
-\item{coefficients}{sol_coef.}
+\item{coefficients}{A list of matrices of spline coefficients.}
 
-\item{times}{A value.}
+\item{times}{Numeric vector of the time values included in the dataset.}
 
-\item{initial_parameterization}{A value.}
+\item{initial_parameterization}{A matrix of the initial parameters found for the data.}
 
-\item{optimal_parameterization}{A value.}
+\item{optimal_parameterization}{A matrix representing the best set of parameters.}
 
-\item{d}{A value.}
+\item{d}{Integer value representing the intrinsic dimension of the manifold.}
 
-\item{D}{A value.}
+\item{D}{Integer value representing the dimension of the input data.}
 
-\item{n_knots}{A value.}
+\item{n_knots}{The number of components identified.}
 
-\item{lambda}{A value.}
+\item{lambda}{A vector of smoothing parameters for the pme functions at each time point.}
 
-\item{gamma}{A value.}
+\item{gamma}{A vector of smoothing parameter values for the higher level spline model.}
 
-\item{coefficient_list}{A value.}
+\item{coefficient_list}{A list containing all matrices of coefficients.}
 
-\item{parameterization_list}{A value.}
+\item{parameterization_list}{A list containing all matrices of parameters.}
 
-\item{smoothing_method}{A value.}
+\item{smoothing_method}{Choose between smoothing by "spline" or "gp".}
+
+\item{initialization_algorithm}{The algorithm that was used to identify the initial parameter values.}
 }
 \value{
 An object with class "lpme".
