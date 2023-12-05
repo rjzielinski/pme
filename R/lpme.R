@@ -30,7 +30,8 @@ new_lpme <- function(embedding_map,
                      gamma,
                      coefficient_list,
                      parameterization_list,
-                     smoothing_method) {
+                     smoothing_method,
+                     initialization_algorithm) {
   lpme_list <- list(
     embedding_map = embedding_map,
     d = d,
@@ -45,7 +46,8 @@ new_lpme <- function(embedding_map,
     msd = msd,
     sol_coef_list = coefficient_list,
     parameterization_list = parameterization_list,
-    smoothing_method = smoothing_method
+    smoothing_method = smoothing_method,
+    initialization = initialization_algorithm
   )
   vctrs::new_vctr(lpme_list, class = "lpme")
 }
@@ -65,7 +67,8 @@ is_lpme <- function(x) {
 #' @param data A numeric matrix of data.
 #' @param d The intrinsic dimension of the data.
 #' @param smoothing_method The approach taken to smoothing over PME coefficients.
-#' @param tuning_para_seq A vector of numeric smoothing parameter values.
+#' @param gamma A vector of numeric smoothing parameter values.
+#' @param lambda A vector of numeric smoothing parameter values for the PME algorithm.
 #' @param alpha A value.
 #' @param max_clusters The maximum number of clusters identified in the data.
 #' @param epsilon A value.
@@ -80,8 +83,13 @@ is_lpme <- function(x) {
 lpme <- function(data,
                  d,
                  smoothing_method = "spline",
-                 tuning_para_seq = NULL,
+                 gamma = NULL,
+                 lambda = NULL,
+                 initialization_algorithm = "isomap",
+                 init_type = "centers",
+                 partitions = NULL,
                  alpha = 0.05,
+                 min_clusters = 0,
                  max_clusters = 500,
                  epsilon = 0.05,
                  max_iter = 100,
@@ -91,16 +99,42 @@ lpme <- function(data,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
-  if (is.null(tuning_para_seq)) {
+  if (is.null(gamma)) {
     if (smoothing_method == "spline") {
-      tuning_para_seq <- c(0, exp(-15:10))
+      gamma <- c(0, exp(-15:10))
     } else if (smoothing_method == "gp") {
-      tuning_para_seq <- 0:10 + 0.5
+      gamma <- 0:10 + 0.5
     }
   }
 
-  initialization <- initialize_lpme(data, init, time_points, d, alpha, max_clusters)
-  init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d)
+  if (is.null(lambda)) {
+    lambda <- exp(-20:10)
+  }
+
+  if (min_clusters == 0) {
+    initialization <- initialize_lpme(
+      data,
+      init,
+      time_points,
+      d,
+      alpha,
+      max_clusters,
+      initialization = initialization_algorithm,
+      initialization_type = init_type
+    )
+  } else {
+    initialization <- initialize_lpme(
+      data,
+      init,
+      time_points,
+      d,
+      alpha,
+      max_clusters,
+      min_clusters,
+      initialization = initialization_algorithm
+    )
+  }
+  init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d, lambda)
   splines <- merge_spline_coefs(init_pme_list, d, time_points)
 
   spline_coefficients <- splines$coef_full
@@ -129,10 +163,10 @@ lpme <- function(data,
   inv_errors <- 1 / init_pme_list$errors
   weights <- inv_errors / sum(inv_errors)
 
-  for (tuning_ind in 1:length(tuning_para_seq)) {
+  for (tuning_ind in 1:length(gamma)) {
     if (smoothing_method == "spline") {
       f_coef_list <- compute_f_coef(
-        tuning_para_seq[tuning_ind],
+        gamma[tuning_ind],
         diag(weights),
         t_initial,
         times,
@@ -213,7 +247,7 @@ lpme <- function(data,
       gamma = 4 - d,
       gamma2 = 3,
       r_full2 = times,
-      w = tuning_para_seq[tuning_ind],
+      w = gamma[tuning_ind],
       smoothing_method = smoothing_method
     )
 
@@ -222,7 +256,7 @@ lpme <- function(data,
     MSE_seq_new[tuning_ind] <- MSE_new
 
     if (verbose == TRUE) {
-      print_mse(tuning_para_seq[tuning_ind], MSE_new)
+      print_mse(gamma[tuning_ind], MSE_new)
     }
 
     SOL_coef[[tuning_ind]] <- ifelse(
@@ -254,7 +288,7 @@ lpme <- function(data,
   f.optimal <- functions[[optimal_ind]]
 
   if (verbose == TRUE) {
-    plot_MSE(MSE_seq_new, tuning_para_seq, optimal_ind)
+    plot_MSE(MSE_seq_new, gamma, optimal_ind)
   }
 
   lpme_out <- new_lpme(
@@ -268,10 +302,11 @@ lpme <- function(data,
     D = D_out,
     n_knots = n_knots,
     lambda = lambda,
-    gamma = tuning_para_seq,
+    gamma = gamma,
     coefficient_list = SOL_coef,
     parameterization_list = TNEW_new,
-    smoothing_method = smoothing_method
+    smoothing_method = smoothing_method,
+    initialization_algorithm = initialization_algorithm
   )
 
   lpme_out
@@ -317,12 +352,12 @@ parameterize <- function(object, x) {
   return(estimate)
 }
 
-initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
+initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp = NULL, initialization, initialization_type) {
 
   if (init %in% c("first", "full")) {
     if (init == "first") {
       init_df <- df[df[, 1] == time_points[1], -1]
-      init_pme <- pme(init_df, d)
+      init_pme <- pme(init_df, d, initialization_algorithm = initialization, initialization_type = initialization_type)
       init_pme_center_order <- order(init_pme$knots$centers[, 1])
       init_pme_centers <- init_pme$knots$centers[init_pme_center_order, ]
 
@@ -335,7 +370,11 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
       init_D <- ncol(df[, -1])
       init_n <- nrow(df)
       lambda <- 4 - d
-      init_N0 <- 20 * init_D
+      if (is.null(min_comp)) {
+        init_N0 <- 20 * init_D
+      } else {
+        init_N0 <- min_comp
+      }
 
       for (idx in 1:length(time_points)) {
         init_df_temp <- df[df[, 1] == time_points[idx], -1]
@@ -347,21 +386,21 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
         init_sigma[[idx]] <- init_est_temp$sigma
         init_clusters[[idx]] <- init_est_temp$km
 
-        nearest_clusters <- map(
+        nearest_clusters <- purrr::map(
           1:nrow(init_centers[[idx]]),
           ~ which.min(as.vector(apply(init_pme_centers, 1, dist_euclidean, y = init_centers[[idx]][.x, ])))
         ) %>%
-          reduce(c)
+          purrr::reduce(c)
 
         opt_run <- which.min(init_pme$MSD)
         params_init <- init_pme$parameterization[[opt_run]][nearest_clusters, ] %>%
           matrix(nrow = nrow(init_centers[[idx]]), byrow = TRUE)
 
-        init_parameterization[[idx]] <- map(
+        init_parameterization[[idx]] <- purrr::map(
           1:nrow(init_centers[[idx]]),
           ~ projection_pme(init_centers[[idx]][.x, ], init_pme$embedding_map, params_init[.x, ])
         ) %>%
-          reduce(rbind)
+          purrr::reduce(rbind)
       }
 
       init_list <- list(
@@ -383,7 +422,11 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
       init_D <- init_dimension_size[2]
       init_n <- init_dimension_size[1]
       lambda <- 4 - d
-      init_N0 <- 20 * init_D
+      if (is.null(min_comp)) {
+        init_N0 <- 20 * init_D
+      } else {
+        init_N0 <- min_comp
+      }
       for (idx in 1:length(time_points)) {
         init_df_temp <- df[df[, 1] == time_points[idx], -1]
         init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
@@ -427,7 +470,7 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp) {
   }
 }
 
-fit_init_pmes <- function(df, time_points, init_option, init, d) {
+fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
   pme_results <- list()
   kernel_coefs <- list()
   polynomial_coefs <- list()
@@ -446,7 +489,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d) {
       pme_results[[idx]] <- pme(
         data = df_temp[, -1],
         d = d,
-        lambda = exp(-20:10),
+        lambda = lambda,
         initialization = list(
           parameterization = matrix(
             init$isomap$points[init$timevals == time_points[idx], ],
@@ -464,7 +507,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d) {
       pme_results[[idx]] <- pme(
         data = df_temp[, -1],
         d = d,
-        lambda = exp(-20:10),
+        lambda = lambda,
         initialization = list(
           parameterization = init$isomap[[idx]],
           theta_hat = init$theta_hat[[idx]],
@@ -479,6 +522,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d) {
       pme_results[[idx]] <- pme(
         data = df_temp[, -1],
         d = d,
+        lambda = lambda,
         verbose = FALSE
       )
     }
@@ -646,23 +690,23 @@ plot_lpme <- function(x, f, r, d, D, time_points) {
   }
 }
 
-plot_MSE <- function(MSE_seq_new, tuning_para_seq, optimal_ind) {
+plot_MSE <- function(MSE_seq_new, gamma, optimal_ind) {
   plt <- ggplot2::ggplot() +
     ggplot2::geom_line(
       ggplot2::aes(
-        x = log(tuning_para_seq[1:length(MSE_seq_new)]),
+        x = log(gamma[1:length(MSE_seq_new)]),
         y = MSE_seq_new
       )
     ) +
     ggplot2::geom_point(
       ggplot2::aes(
-        x = log(tuning_para_seq[1:length(MSE_seq_new)]),
+        x = log(gamma[1:length(MSE_seq_new)]),
         y = MSE_seq_new
       ),
       color = "orange"
     ) +
     ggplot2::geom_vline(
-      xintercept = log(tuning_para_seq[optimal_ind]),
+      xintercept = log(gamma[optimal_ind]),
       color = "darkgreen"
     ) +
     ggplot2::xlab("Log Gamma") +
@@ -670,7 +714,7 @@ plot_MSE <- function(MSE_seq_new, tuning_para_seq, optimal_ind) {
   print(
     paste0(
       "The optimal tuning parameter is ",
-      as.character(tuning_para_seq[optimal_ind]),
+      as.character(gamma[optimal_ind]),
       ", and the MSD of the optimal fit is ",
       as.character(MSE_seq_new[optimal_ind], ".")
     )

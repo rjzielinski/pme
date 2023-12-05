@@ -26,7 +26,10 @@
 pme <- function(data,
     d,
     initialization = NULL,
+    initialization_algorithm = "isomap",
+    initialization_type = "subsample",
     lambda = exp(-15:5),
+    partitions = NULL,
     alpha = 0.05,
     min_clusters = 0,
     max_clusters = 100,
@@ -49,7 +52,26 @@ pme <- function(data,
 
   # Initialization ----------------------------------------
   if (is.null(initialization)) {
-    initialization <- initialize_pme(data, d, min_clusters, alpha, max_clusters)
+    if (initialization_type == "subsample") {
+      initialization <- initialize_pme(
+        data,
+        d,
+        min_clusters,
+        alpha,
+        max_clusters,
+        algorithm = initialization_algorithm,
+        component_type = "subsample"
+      )
+    } else {
+      initialization <- initialize_pme(
+        data,
+        d,
+        min_clusters,
+        alpha,
+        max_clusters,
+        algorithm = initialization_algorithm
+      )
+    }
   }
   weights <- diag(initialization$theta_hat)
   X <- initialization$centers
@@ -190,7 +212,8 @@ pme <- function(data,
     coefs = coefs,
     parameterization = parameterization,
     tuning_vec = lambda,
-    embeddings = embeddings
+    embeddings = embeddings,
+    initialization_algorithm = initialization_algorithm
   )
   pme_out
 }
@@ -230,7 +253,8 @@ new_pme <- function(embedding_map,
                     coefs,
                     parameterization,
                     tuning_vec,
-                    embeddings) {
+                    embeddings,
+                    initialization_algorithm) {
   pme_list <- list(
     embedding_map = embedding_map,
     knots = knots,
@@ -242,7 +266,8 @@ new_pme <- function(embedding_map,
     coefs = coefs,
     parameterization = parameterization,
     tuning_vec = tuning_vec,
-    embeddings = embeddings
+    embeddings = embeddings,
+    initialization = initialization_algorithm
   )
   vctrs::new_vctr(pme_list, class = "pme")
 }
@@ -274,21 +299,99 @@ is_pme <- function(x) {
 #' @return A list used to initialize PME.
 #'
 #' @noRd
-initialize_pme <- function(x, d, min_clusters, alpha, max_clusters) {
+initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_type = "centers", algorithm = "isomap", subsample_size = 5) {
   est <- hdmde(x, min_clusters, alpha, max_clusters)
-  est_order <- order(est$mu[, 1])
-  theta_hat <- est$theta_hat[est_order]
-  centers <- est$mu[est_order, ]
-  sigma <- est$sigma
-  W <- diag(theta_hat)
-  X <- est$mu[est_order, ]
-  I <- length(theta_hat)
+  if (component_type == "subsample") {
+    cluster_points <- matrix(nrow = 1, ncol = ncol(x))
+    point_weights <- vector()
+    for (cluster in 1:nrow(est$mu)) {
+      temp_x <- x[est$km$cluster == cluster, ] %>%
+        matrix(ncol = ncol(x))
+      # cluster_distances <- map(
+      #   1:nrow(temp_x),
+      #   ~ dist_euclidean(est$mu[cluster, ], temp_x[.x, ])
+      # ) %>%
+      #   reduce(c)
+      cluster_sample <- sample(
+        1:nrow(temp_x),
+        size = subsample_size,
+        replace = TRUE
+      )
+      points <- unique(cluster_sample)
+      n_occurences <- table(cluster_sample)
 
-  dissimilarity <- as.matrix(stats::dist(X))
-  init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
+      cluster_points <- rbind(
+        cluster_points,
+        temp_x[points, ]
+      )
+      point_weights <- c(
+        point_weights,
+        est$theta_hat[cluster] * n_occurences
+      )
+    }
+    cluster_points <- cluster_points[-1, ]
+    est_order <- order(cluster_points[, 1])
+    centers <- cluster_points[est_order, ]
+    W <- diag(point_weights)
+    theta_hat <- point_weights
+  } else {
+    est_order <- order(est$mu[, 1])
+    theta_hat <- est$theta_hat[est_order]
+    centers <- est$mu[est_order, ]
+    W <- diag(theta_hat)
+  }
+  sigma <- est$sigma
+  X <- centers
+  I <- nrow(centers)
+
+  if (algorithm == "diffusion_maps") {
+    init_parameterization <- dimRed::embed(
+      X,
+      "DiffusionMaps",
+      ndim = d,
+      .mute = c("message", "output")
+    )
+  # } else if (algorithm == "hessian_eigenmaps") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "HLLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
+  } else if (algorithm == "laplacian_eigenmaps") {
+    init_parameterization <- dimRed::embed(
+      X,
+      "LaplacianEigenmaps",
+      knn = floor(sqrt(nrow(X))),
+      ndim = d,
+      .mute = c("message", "output")
+    )
+  # } else if (algorithm == "lle") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "LLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
+  } else {
+    init_parameterization <- dimRed::embed(
+      X,
+      "Isomap",
+      knn = floor(sqrt(nrow(X))),
+      ndim = d,
+      .mute = c("message", "output")
+    )
+    # dissimilarity <- as.matrix(stats::dist(X))
+    # init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
+  }
+
+  output <- dimRed::as.data.frame(init_parameterization) %>%
+    as.matrix()
 
   list(
-    parameterization = init_parameterization$points,
+    parameterization = matrix(output[, 1:d], nrow = nrow(X)),
     theta_hat = theta_hat,
     centers = centers,
     sigma = sigma,
