@@ -8,13 +8,15 @@ pme(
   data,
   d,
   initialization = NULL,
+  initialization_algorithm = "isomap",
+  initialization_type = "subsample",
   lambda = exp(-15:5),
   alpha = 0.05,
   min_clusters = 0,
   max_clusters = 100,
   epsilon = 0.05,
   max_iter = 100,
-  SSD_ratio_threshold = 10,
+  SSD_ratio_threshold = 5,
   print_plots = FALSE,
   verbose = FALSE
 )
@@ -25,6 +27,10 @@ pme(
 \item{d}{A positive integer representing the intrinsic dimension.}
 
 \item{initialization}{A list of values providing an initialization for \code{pme()}. It is not recommended to supply these values manually.}
+
+\item{initialization_algorithm}{The name of a manifold learning algorithm to use for finding the initial parameterizations. Options include "isomap", "diffusion_maps", and "laplacian_eigenmaps".}
+
+\item{initialization_type}{Choose whether to use cluster centers or represent clusters by subsampling from the associated points. Options: "centers" or "subsample".}
 
 \item{lambda}{A vector of smoothing values to be considered.}
 
@@ -49,10 +55,4 @@ An object of type pme.
 }
 \description{
 This function still requires completed documentation
-}
-\examples{
-r <- runif(1000, min = 0, max = pi)
-x <- sin(r) + rnorm(1000, mean = 0, sd = 0.25)
-mat <- cbind(r, x)
-out <- pme(mat, d = 1)
 }
