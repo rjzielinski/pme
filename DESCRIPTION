@@ -13,6 +13,7 @@ LinkingTo:
     RcppArmadillo,
     RcppZiggurat
 Imports: 
+    dimRed,
     ggplot2,
     magrittr,
     MASS,

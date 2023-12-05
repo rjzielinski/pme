@@ -5,6 +5,8 @@
 #' @param data A numeric matrix of high-dimensional data.
 #' @param d A positive integer representing the intrinsic dimension.
 #' @param initialization A list of values providing an initialization for `pme()`. It is not recommended to supply these values manually.
+#' @param initialization_algorithm The name of a manifold learning algorithm to use for finding the initial parameterizations. Options include "isomap", "diffusion_maps", and "laplacian_eigenmaps".
+#' @param initialization_type Choose whether to use cluster centers or represent clusters by subsampling from the associated points. Options: "centers" or "subsample".
 #' @param lambda A vector of smoothing values to be considered.
 #' @param alpha The significant level to be used when testing the need for additional clusters in data reduction.
 #' @param min_clusters The minimum number of clusters allowed in data reduction.
@@ -17,19 +19,12 @@
 #'
 #' @return An object of type pme.
 #' @export
-#'
-#' @examples
-#' r <- runif(1000, min = 0, max = pi)
-#' x <- sin(r) + rnorm(1000, mean = 0, sd = 0.25)
-#' mat <- cbind(r, x)
-#' out <- pme(mat, d = 1)
 pme <- function(data,
     d,
     initialization = NULL,
     initialization_algorithm = "isomap",
     initialization_type = "subsample",
     lambda = exp(-15:5),
-    partitions = NULL,
     alpha = 0.05,
     min_clusters = 0,
     max_clusters = 100,
@@ -239,6 +234,7 @@ pme <- function(data,
 #' @param tuning_vec A numeric vector of smoothing values.
 #' @param embeddings A list of the embedding maps estimated at each smoothing
 #' value.
+#' @param initialization_algorithm A character value indicating the algorithm used to find the initial parameterization.
 #'
 #' @return An object of type PME.
 #'

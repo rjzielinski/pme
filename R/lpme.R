@@ -2,18 +2,19 @@
 #'
 #' @param embedding_map The optimal embedding function.
 #' @param msd Vector of Mean Squared Distance Values.
-#' @param coefficients sol_coef.
-#' @param times A value.
-#' @param initial_parameterization A value.
-#' @param optimal_parameterization A value.
-#' @param d A value.
-#' @param D A value.
-#' @param n_knots A value.
-#' @param lambda A value.
-#' @param gamma A value.
-#' @param coefficient_list A value.
-#' @param parameterization_list A value.
-#' @param smoothing_method A value.
+#' @param coefficients A list of matrices of spline coefficients.
+#' @param times Numeric vector of the time values included in the dataset.
+#' @param initial_parameterization A matrix of the initial parameters found for the data.
+#' @param optimal_parameterization A matrix representing the best set of parameters.
+#' @param d Integer value representing the intrinsic dimension of the manifold.
+#' @param D Integer value representing the dimension of the input data.
+#' @param n_knots The number of components identified.
+#' @param lambda A vector of smoothing parameters for the pme functions at each time point.
+#' @param gamma A vector of smoothing parameter values for the higher level spline model.
+#' @param coefficient_list A list containing all matrices of coefficients.
+#' @param parameterization_list A list containing all matrices of parameters.
+#' @param smoothing_method Choose between smoothing by "spline" or "gp".
+#' @param initialization_algorithm The algorithm that was used to identify the initial parameter values.
 #'
 #' @return An object with class "lpme".
 #' @export
@@ -69,7 +70,10 @@ is_lpme <- function(x) {
 #' @param smoothing_method The approach taken to smoothing over PME coefficients.
 #' @param gamma A vector of numeric smoothing parameter values.
 #' @param lambda A vector of numeric smoothing parameter values for the PME algorithm.
+#' @param initialization_algorithm A character value describing the algorithm used to obtain initial parameter values. Accepted values are "isomap", "diffusion_maps", and "laplacian_eigenmaps".
+#' @param init_type A character value describing whether initialization should use cluster centers or subsample from cluster values. Accepted values are "centers" or "subsampling".
 #' @param alpha A value.
+#' @param min_clusters The minimum number of clusters in the data.
 #' @param max_clusters The maximum number of clusters identified in the data.
 #' @param epsilon A value.
 #' @param max_iter The maximum number of iterations.
@@ -87,7 +91,6 @@ lpme <- function(data,
                  lambda = NULL,
                  initialization_algorithm = "isomap",
                  init_type = "centers",
-                 partitions = NULL,
                  alpha = 0.05,
                  min_clusters = 0,
                  max_clusters = 500,
