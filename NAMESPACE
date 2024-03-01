@@ -3,6 +3,7 @@
 export("%>%")
 export(dist_euclidean)
 export(embed)
+export(etaFunc)
 export(hdmde)
 export(is_lpme)
 export(is_pme)

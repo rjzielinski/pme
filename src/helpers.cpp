@@ -98,6 +98,8 @@ arma::mat calcE(arma::mat x, int lambda) {
 //' @param lambda The number of dimensions.
 //'
 //' @return A numeric matrix.
+//' @export
+//'
 // [[Rcpp::export]]
 arma::mat etaFunc(arma::vec t, arma::mat tau, int lambda) {
   int nrow = tau.n_rows;

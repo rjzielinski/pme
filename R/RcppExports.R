@@ -66,6 +66,8 @@ calcE <- function(x, lambda) {
 #' @param lambda The number of dimensions.
 #'
 #' @return A numeric matrix.
+#' @export
+#'
 etaFunc <- function(t, tau, lambda) {
     .Call(`_pme_etaFunc`, t, tau, lambda)
 }
