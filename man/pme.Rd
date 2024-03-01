@@ -9,7 +9,7 @@ pme(
   d,
   initialization = NULL,
   initialization_algorithm = "isomap",
-  initialization_type = "subsample",
+  initialization_type = "centers",
   lambda = exp(-15:5),
   alpha = 0.05,
   min_clusters = 0,
