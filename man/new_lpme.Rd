@@ -17,6 +17,7 @@ new_lpme(
   lambda,
   gamma,
   coefficient_list,
+  coefficient_functions,
   parameterization_list,
   smoothing_method,
   initialization_algorithm
@@ -46,6 +47,8 @@ new_lpme(
 \item{gamma}{A vector of smoothing parameter values for the higher level spline model.}
 
 \item{coefficient_list}{A list containing all matrices of coefficients.}
+
+\item{coefficient_functions}{A list of functions that produce the PME coefficients at a given time point.}
 
 \item{parameterization_list}{A list containing all matrices of parameters.}
 
