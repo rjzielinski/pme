@@ -12,6 +12,7 @@
 #' @param lambda A vector of smoothing parameters for the pme functions at each time point.
 #' @param gamma A vector of smoothing parameter values for the higher level spline model.
 #' @param coefficient_list A list containing all matrices of coefficients.
+#' @param coefficient_functions A list of functions that produce the PME coefficients at a given time point.
 #' @param parameterization_list A list containing all matrices of parameters.
 #' @param smoothing_method Choose between smoothing by "spline" or "gp".
 #' @param initialization_algorithm The algorithm that was used to identify the initial parameter values.
@@ -30,6 +31,7 @@ new_lpme <- function(embedding_map,
                      lambda,
                      gamma,
                      coefficient_list,
+                     coefficient_functions,
                      parameterization_list,
                      smoothing_method,
                      initialization_algorithm) {
@@ -46,6 +48,7 @@ new_lpme <- function(embedding_map,
     sol_coef = coefficients,
     msd = msd,
     sol_coef_list = coefficient_list,
+    sol_coef_functions = coefficient_functions,
     parameterization_list = parameterization_list,
     smoothing_method = smoothing_method,
     initialization = initialization_algorithm
@@ -262,11 +265,12 @@ lpme <- function(data,
       print_mse(gamma[tuning_ind], MSE_new)
     }
 
-    SOL_coef[[tuning_ind]] <- ifelse(
-      smoothing_method == "spline",
-      f_coef_list$sol,
-      NA
-    )
+    if (smoothing_method == "spline") {
+      SOL_coef[[tuning_ind]] <- f_coef_list$sol
+    } else {
+      SOL_coef[[tuning_ind]] <- NA
+    }
+
     TNEW_new[[tuning_ind]] <- updated_param$parameterization
     coefs[[tuning_ind]] <- params
     x_funs[[tuning_ind]] <- updated_param$embedding
@@ -307,6 +311,7 @@ lpme <- function(data,
     lambda = lambda,
     gamma = gamma,
     coefficient_list = SOL_coef,
+    coefficient_functions = func_coef,
     parameterization_list = TNEW_new,
     smoothing_method = smoothing_method,
     initialization_algorithm = initialization_algorithm
