@@ -105,6 +105,14 @@ lpme <- function(data,
                  init = "full") {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
+  min_observations <- nrow(data)
+  for (time_val in time_points) {
+    temp_data <- data[data[, 1] == time_val, ]
+    min_observations <- min(min_observations, nrow(temp_data))
+  }
+
+  max_clusters <- min(min_observations - 1, max_clusters)
+
   if (is.null(gamma)) {
     if (smoothing_method == "spline") {
       gamma <- c(0, exp(-15:10))
@@ -431,7 +439,7 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp 
       init_n <- init_dimension_size[1]
       lambda <- 4 - d
       if (is.null(min_comp)) {
-        init_N0 <- 20 * init_D
+        init_N0 <- 10 * init_D
       } else {
         init_N0 <- min_comp
       }

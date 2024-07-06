@@ -63,7 +63,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 
   test_rejection <- FALSE
 
-  while ((test_rejection == FALSE) & (N <= min(n, max_comp))) {
+  while ((test_rejection == FALSE) & (N < min(n - 1, max_comp))) {
     N <- N + 1
     components_new <- compute_estimates(x_obs, N)
     p_new <- purrr::map(
