@@ -39,10 +39,10 @@ pme <- function(data,
   D <- dim(data)[2]
 
   if (min_clusters == 0) {
-    min_clusters <- 20 * D
+    min_clusters <- 10 * d
   }
   if (min_clusters > max_clusters) {
-    max_clusters <- 2 * min_clusters
+    max_clusters <- nrow(data) - 1
   }
 
   # Initialization ----------------------------------------

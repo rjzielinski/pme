@@ -126,28 +126,20 @@ lpme <- function(data,
   }
 
   if (min_clusters == 0) {
-    initialization <- initialize_lpme(
-      data,
-      init,
-      time_points,
-      d,
-      alpha,
-      max_clusters,
-      initialization = initialization_algorithm,
-      initialization_type = init_type
-    )
-  } else {
-    initialization <- initialize_lpme(
-      data,
-      init,
-      time_points,
-      d,
-      alpha,
-      max_clusters,
-      min_clusters,
-      initialization = initialization_algorithm
-    )
+    min_clusters <- 10 * d
   }
+
+  initialization <- initialize_lpme(
+    data,
+    init,
+    time_points,
+    d,
+    alpha,
+    max_clusters,
+    min_clusters,
+    initialization = initialization_algorithm
+  )
+
   init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d, lambda)
   splines <- merge_spline_coefs(init_pme_list, d, time_points)
 
@@ -368,7 +360,7 @@ parameterize <- function(object, x) {
   return(estimate)
 }
 
-initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp = NULL, initialization, initialization_type) {
+initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp, initialization, initialization_type) {
 
   if (init %in% c("first", "full")) {
     if (init == "first") {
@@ -386,11 +378,7 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp 
       init_D <- ncol(df[, -1])
       init_n <- nrow(df)
       lambda <- 4 - d
-      if (is.null(min_comp)) {
-        init_N0 <- 20 * init_D
-      } else {
-        init_N0 <- min_comp
-      }
+      init_N0 <- min_comp
 
       for (idx in 1:length(time_points)) {
         init_df_temp <- df[df[, 1] == time_points[idx], -1]
