@@ -29,6 +29,54 @@ is_hdmde <- function(x) {
   inherits(x, "hdmde")
 }
 
+#' High-Dimensional Mixture Density Estimation - Modification
+#'
+#' Data reduction approach to estimate a high-dimensional dataset using a
+#' mixture of distributions. The centers of these distributions are identified
+#' using k-means clustering. This function is modified to use the BIC of the
+#' k-means clustering output to select the number of mixture components.
+#'
+#' @param x_obs A numeric matrix containing the data to be reduced.
+#' @param N0 An integer specifying the lower bound for the number of density components.
+#' @param alpha A numeric value between 0 and 1 specifying the confidence level.
+#' @param max_comp An integer specifying the upper bound for the number of density components.
+#'
+#' @return An object of type hdmde
+#' @export
+hdmde_mod <- function(x_obs, N0, alpha, max_comp) {
+  # Initialization ----------------------------
+  n <- nrow(x_obs)
+  D <- ncol(x_obs)
+  N <- N0
+
+  component_estimates <- compute_estimates(x_obs, N)
+  km_old <- component_estimates$km
+
+  # see http://sherrytowers.com/2013/10/24/k-means-clustering/ for aic
+  # computations
+
+  aic_old <- km_old$tot.withinss + (2 * N * D)
+  test_rejection <- FALSE
+
+  while ((test_rejection == FALSE) & (N < min(n - 1, max_comp))) {
+    N <- N + 1
+    components_new <- compute_estimates(x_obs, N)
+    km_new <- components_new$km
+    aic_new <- km_new$tot.withinss + (2 * N * D)
+
+    if (abs(aic_new - aic_old) / aic_old < alpha) {
+      test_rejection <- TRUE
+    }
+    km_old <- km_new
+    aic_old <- aic_new
+    component_estimates <- components_new
+  }
+
+  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
+}
+
+
+
 #' High-Dimensional Mixture Density Estimation
 #'
 #' Data reduction approach to estimate a high-dimensional dataset using a
@@ -50,7 +98,8 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   N <- N0
 
   component_estimates <- compute_estimates(x_obs, N)
-  p_old <- purrr::map(
+
+  log_p_old <- purrr::map(
     1:n,
     ~ f_test(
       x_obs[.x, ],
@@ -66,7 +115,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   while ((test_rejection == FALSE) & (N < min(n - 1, max_comp))) {
     N <- N + 1
     components_new <- compute_estimates(x_obs, N)
-    p_new <- purrr::map(
+    log_p_new <- purrr::map(
       1:n,
       ~ f_test(
         x_obs[.x, ],
@@ -76,13 +125,51 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
       )
     ) %>%
       unlist()
-    difference <- p_new - p_old
-    sigma_hat_sq <- mean((difference - mean(difference))^2)
-    Z_I_N <- sqrt(n) * mean(difference) / sqrt(sigma_hat_sq)
+
+    log_difference <- purrr::map(
+      1:n,
+      ~ logspace_diff(log_p_new[.x], log_p_old[.x])
+    ) %>%
+      unlist()
+
+    diff_ind <- log_p_new > log_p_old
+
+    log_diff_sq <- purrr::map(
+      1:n,
+      ~ logspace_diff(logspace_sum(2 * log_p_new[.x], 2 * log_p_old[.x]), log(2) + log_p_new[.x] + log_p_old[.x])
+    ) %>%
+      unlist()
+
+    log_mean_diff <- 0
+    p_new_improve <- which(diff_ind)
+    p_old_improve <- which(!diff_ind)
+    log_mean_diff <- logspace_diff(
+      logspace_sum_vec(log_difference[p_new_improve]),
+      logspace_sum_vec(log_difference[p_old_improve])
+    ) - log(n)
+
+    # we have log difference values, but they are 0 after exponentiating
+    # difference <- p_new - p_old
+
+    # log_mean_diff <- logspace_sum_vec(log_difference) - log(length(log_difference))
+    log_residuals <- purrr::map(1:n, ~ logspace_diff(log_difference[.x], log_mean_diff)) %>%
+      unlist()
+    # log_sigma_hat_sq <- 2 * logspace_sum_vec(log_difference) - 2 * logspace_sum_vec(log_mean_diff)
+    log_sigma_hat_sq <- purrr::map(
+      1:n,
+      ~ logspace_diff(log_diff_sq[.x], 2 * log_mean_diff)
+    ) %>%
+      unlist() %>%
+      logspace_sum_vec()
+    log_sigma_hat_sq <- log_sigma_hat_sq - log(n)
+
+    # sigma_hat_sq <- mean((difference - mean(difference))^2)
+    # Z_I_N <- sqrt(n) * mean(difference) / sqrt(sigma_hat_sq)
+    Z_I_N <- exp(log_mean_diff + (0.5 * log(n)) - (0.5 * log_sigma_hat_sq))
     if (!is.na(Z_I_N) & (abs(Z_I_N) <= zalpha)) {
       test_rejection <- TRUE
     }
-    p_old <- p_new
+    log_p_old <- log_p_new
   }
 
   new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
@@ -103,10 +190,17 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 #' @noRd
 compute_estimates <- function(x, n) {
   # increasing iter.max helps to avoid poor fit in high dimensional situations.
-  km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100)
+  km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100, algorithm = "Lloyd")
   mu <- km$centers
   sigma_est <- estimate_sigma(x, km)
-  theta_hat <- calc_weights(x, mu, sigma_est)
+  # theta_hat <- calc_weights(x, mu, sigma_est)
+  # instead of using calc_weights function, approximate weights using
+  # kmeans cluster assignments for stability in high dimensions
+  theta_hat <- purrr::map(
+    1:n,
+    ~ sum(km$cluster == .x) / nrow(x)
+  ) %>%
+    unlist()
 
   list(
     mu = mu,
@@ -156,28 +250,42 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
   n <- nrow(x_obs)
   D <- ncol(x_obs)
   N <- nrow(mu)
+  A <- calc_A(x_obs, mu, sigma)
   theta_old <- rep(1 / N, N)
   abs_diff <- 10 * epsilon
   count <- 0
   lambda_hat_old <- c(n, rep(-1, D))
 
-  A <- calc_A(x_obs, mu, sigma)
 
   while ((abs_diff > epsilon) & (count <= max_iter)) {
-    W <- t(t(A) * theta_old)
-    w <- Rfast::colsums(W / Rfast::rowsums(W))
+    W <- t(t(A) + log(theta_old))
+    W_adj <- W - apply(W, 1, logspace_sum_vec)
+    w <- apply(W_adj, 2, logspace_sum_vec)
+    opt_out <- stats::optim(
+      par = lambda_hat_old,
+      fn = f_lambda,
+      x = x_obs,
+      mu = mu,
+      w = exp(w),
+      method = "CG",
+      control = list(maxit = 1000)
+    )
+    lambda_hat2 <- opt_out$par
     lambda_hat <- stats::nlm(
       f = f_lambda,
       p = lambda_hat_old,
       x = x_obs,
       mu = mu,
-      w = w,
-      iterlim = 1000
+      w = exp(w),
+      iterlim = 10000
     )$estimate
-    theta_new <- w / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
+    theta_new <- exp(w) / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
+    theta_new2 <- theta_new / sum(theta_new)
 
     abs_diff <- dist_euclidean(theta_new, theta_old)
-    if (is.na(abs_diff)) {
+    # should I change how theta is bounded?
+    # does theta need to be normalized?
+    if (is.na(abs_diff) | sum(bound_theta(theta_new) == 0)) {
       return(bound_theta(theta_old))
     } else {
       theta_old <- bound_theta(theta_new)
@@ -200,10 +308,10 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
 f_test <- function(x, mu, sigma, theta_hat) {
   comp_vec <- purrr::map(
     1:nrow(mu),
-    ~ smoothing_kernel(x, mu[.x, ], sigma)
+    ~ log_smoothing_kernel(x, mu[.x, ], sigma)
   ) %>%
     unlist()
-  sum(theta_hat * comp_vec)
+  logspace_sum_vec(log(theta_hat) + comp_vec)
 }
 
 
@@ -218,7 +326,7 @@ f_test <- function(x, mu, sigma, theta_hat) {
 #' @return A numeric matrix.
 #'
 #' @noRd
-calc_A <- function(x_obs, mu, sigma) {
+calc_A_r <- function(x_obs, mu, sigma) {
   n <- nrow(x_obs)
   N <- nrow(mu)
 
@@ -226,7 +334,7 @@ calc_A <- function(x_obs, mu, sigma) {
   for (j in 1:N) {
     A[, j] <- purrr::map(
       1:n,
-      ~ smoothing_kernel(x_obs[.x, ], mu[j, ], sigma)
+      ~ smoothing_kernel(as.numeric(x_obs[.x, ]), mu[j, ], sigma)
     ) %>%
       unlist()
   }
