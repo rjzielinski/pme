@@ -14,9 +14,21 @@ smoothing_kernel <- function(x, mu, sigma) {
   return((sigma^(-length(x))) * prod(yseq))
 }
 
-log_smoothing_kernel <- function(x, mu, sigma) {
+
+#' Smoothing Kernel for Density Estimation
+#' 
+#' Implements Gaussian kernel smoothing on log-scale
+#' 
+#' @param x A vector of numeric values.
+#' @param mu The mean of the Gaussian density
+#' @param sigma The standard deviation of the Gaussian density
+#' 
+#' @return A numeric value
+#' @export
+#' 
+log_smoothing_kernel_r <- function(x, mu, sigma) {
   yseq <- stats::dnorm((x - mu) / sigma)
-  output <- (-length(x) * log(sigma)) + sum(yseq)
+  output <- (-length(x) * log(sigma)) + sum(log(yseq))
   return(output)
 }
 
