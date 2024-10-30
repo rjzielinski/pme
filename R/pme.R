@@ -25,7 +25,7 @@ pme <- function(data,
     initialization_algorithm = "isomap",
     initialization_type = "centers",
     lambda = exp(-15:5),
-    alpha = 0.05,
+    alpha = 0.01,
     min_clusters = 0,
     max_clusters = 100,
     epsilon = 0.05,
@@ -39,7 +39,7 @@ pme <- function(data,
   D <- dim(data)[2]
 
   if (min_clusters == 0) {
-    min_clusters <- 10 * d
+    min_clusters <- 5 * d
   }
   if (min_clusters > max_clusters) {
     max_clusters <- nrow(data) - 1
@@ -296,7 +296,7 @@ is_pme <- function(x) {
 #'
 #' @noRd
 initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_type = "centers", algorithm = "isomap", subsample_size = 5) {
-  est <- hdmde(x, min_clusters, alpha, max_clusters)
+  est <- hdmde_mod(x, min_clusters, alpha, max_clusters)
   if (component_type == "subsample") {
     cluster_points <- matrix(nrow = 1, ncol = ncol(x))
     point_weights <- vector()
