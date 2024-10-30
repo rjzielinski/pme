@@ -33,6 +33,56 @@ dist_euclidean <- function(x, y) {
     .Call(`_pme_dist_euclidean`, x, y)
 }
 
+#' Sum in Logspace
+#'
+#' Given log(x) and log(y), return log(x+y)
+#'
+#' @param x A double value
+#' @param y A double value
+#' @return A numeric value
+#' @export
+logspace_sum <- function(lx, ly) {
+    .Call(`_pme_logspace_sum`, lx, ly)
+}
+
+#' Difference in Logspace
+#'
+#' Given log(x) and log(y), return log(x-y)
+#'
+#' @param x A double value
+#' @param y A double value
+#' @return A numeric value
+#' @export
+logspace_diff <- function(lx, ly) {
+    .Call(`_pme_logspace_diff`, lx, ly)
+}
+
+#' Sum over a Vector in Logspace
+#'
+#' Recursively call logspace_sum() over n > 2 values
+#'
+#' @param x A numeric vector of values in logspace
+#' @return A numeric value
+#' @export
+#'
+logspace_sum_vec <- function(x) {
+    .Call(`_pme_logspace_sum_vec`, x)
+}
+
+#' Smoothing Kernel for Density Estimation
+#'
+#' Implements Gaussian kernel smoothing on log-scale
+#'
+#' @param x A numeric vector of values.
+#' @param mu The mean of the Gaussian density
+#' @param sigma The standard deviation of the Gaussian density
+#'
+#' @return A numeric value.
+#' @export
+log_smoothing_kernel <- function(x, mu, sigma) {
+    .Call(`_pme_log_smoothing_kernel`, x, mu, sigma)
+}
+
 #' Documentation Still Needed
 #'
 #' This is a function that still needs to be documented properly.
@@ -95,5 +145,31 @@ calc_nearest_x <- function(df, x) {
 #' @return A numeric matrix.
 calc_init_param <- function(df, tnew, nearest_x) {
     .Call(`_pme_calc_init_param`, df, tnew, nearest_x)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param df A numeric matrix.
+#' @param tnew A numeric matrix.
+#' @param nearest_x A numeric vector.
+#'
+#' @return A numeric matrix.
+calc_A <- function(x_obs, mu, sigma) {
+    .Call(`_pme_calc_A`, x_obs, mu, sigma)
+}
+
+#' Calculate Weights of Mixture Components
+#'
+#' @param x_obs A numeric matrix containing the unreduced data.
+#' @param mu A numeric matrix of component centers.
+#' @param sigma A numeric value denoting the bandwidth of the density estimation.
+#' @param epsilon A numeric value denoting the tolerance of the Euclidean distance between weights.
+#' @param max_iter An integer denoting the maximum number of iterations.
+#'
+#' @return A numeric vector of weights.
+calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
+    .Call(`_pme_calc_weights_cpp`, x_obs, mu, sigma, epsilon, max_iter)
 }
 
