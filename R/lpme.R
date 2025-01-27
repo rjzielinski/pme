@@ -218,7 +218,7 @@ lpme <- function(data,
     }
 
     updated_param <- update_parameterization(
-     time_points,
+      time_points,
       t_initial,
       x_merged,
       f_new,
@@ -361,7 +361,6 @@ parameterize <- function(object, x) {
 }
 
 initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp, initialization, initialization_type) {
-
   if (init %in% c("first", "full")) {
     if (init == "first") {
       init_df <- df[df[, 1] == time_points[1], -1]
@@ -487,7 +486,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
   num_clusters <- rep(0, length(time_points))
   errors <- vector()
 
-  for (idx in 1:length(time_points)) {
+  for (idx in seq_along(time_points)) {
     df_temp <- df[df[, 1] == time_points[idx], ]
     if (init_option == "full") {
       pme_results[[idx]] <- pme(
