@@ -190,7 +190,14 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 #' @noRd
 compute_estimates <- function(x, n) {
   # increasing iter.max helps to avoid poor fit in high dimensional situations.
-  km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100, algorithm = "Lloyd")
+  # km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100, algorithm = "Lloyd")
+  km <- stats::kmeans(
+    x,
+    n,
+    iter.max = 10000,
+    nstart = 1000,
+    algorithm = "MacQueen"
+  )
   mu <- km$centers
   sigma_est <- estimate_sigma(x, km)
   # theta_hat <- calc_weights(x, mu, sigma_est)
@@ -221,11 +228,11 @@ compute_estimates <- function(x, n) {
 estimate_sigma <- function(x, km) {
   clusters <- unique(km$cluster)
   sigma_vec <- rep(NA, length(clusters))
-  for (j in 1:length(clusters)) {
+  for (j in seq_along(clusters)) {
     index_temp <- which(km$cluster == clusters[j])
     x_temp <- matrix(x[index_temp, ], nrow = length(index_temp))
     s <- purrr::map(
-      1:nrow(x_temp),
+      seq_len(nrow(x_temp)),
       ~ dist_euclidean(x_temp[.x, ], km$centers[clusters[j], ])^2
     ) %>%
       unlist()
