@@ -16,7 +16,6 @@ LinkingTo:
 Imports: 
     dimRed,
     ggplot2,
-    igraph,
     magrittr,
     MASS,
     nloptr,
