@@ -341,44 +341,44 @@ initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_ty
   I <- nrow(centers)
 
   # if (algorithm == "diffusion_maps") {
-    # init_parameterization <- dimRed::embed(
-    #   X,
-    #   "DiffusionMaps",
-    #   ndim = d,
-    #   .mute = c("message", "output")
-    )
-    # } else if (algorithm == "hessian_eigenmaps") {
-    #   init_parameterization <- dimRed::embed(
-    #     X,
-    #     "HLLE",
-    #     knn = floor(sqrt(nrow(X))),
-    #     ndim = d
-    #     # .mute = c("message", "output")
-    #   )
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "DiffusionMaps",
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
+  # } else if (algorithm == "hessian_eigenmaps") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "HLLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
   # } else if (algorithm == "laplacian_eigenmaps") {
-    # init_parameterization <- dimRed::embed(
-    #   X,
-    #   "LaplacianEigenmaps",
-    #   knn = floor(sqrt(nrow(X))),
-    #   ndim = d,
-    #   .mute = c("message", "output")
-    # )
-    # } else if (algorithm == "lle") {
-    #   init_parameterization <- dimRed::embed(
-    #     X,
-    #     "LLE",
-    #     knn = floor(sqrt(nrow(X))),
-    #     ndim = d
-    #     # .mute = c("message", "output")
-    #   )
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "LaplacianEigenmaps",
+  #   knn = floor(sqrt(nrow(X))),
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
+  # } else if (algorithm == "lle") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "LLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
   # } else {
-    # init_parameterization <- dimRed::embed(
-    #   X,
-    #   "Isomap",
-    #   knn = floor(sqrt(nrow(X))),
-    #   ndim = d,
-    #   .mute = c("message", "output")
-    # )
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "Isomap",
+  #   knn = floor(sqrt(nrow(X))),
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
   #   dissimilarity <- as.matrix(stats::dist(X))
   #   init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
   # }
