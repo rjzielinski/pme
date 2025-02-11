@@ -2,16 +2,16 @@
 % Please edit documentation in R/RcppExports.R
 \name{calc_A}
 \alias{calc_A}
-\title{Documentation Still Needed}
+\title{Calculate "A" Matrix}
 \usage{
 calc_A(x_obs, mu, sigma)
 }
 \arguments{
-\item{df}{A numeric matrix.}
+\item{x_obs}{A numeric matrix containing unreduced data.}
 
-\item{tnew}{A numeric matrix.}
+\item{mu}{A numeric matrix of component centers.}
 
-\item{nearest_x}{A numeric vector.}
+\item{sigma}{A numeric value denoting the bandwidth of density estimation.}
 }
 \value{
 A numeric matrix.
