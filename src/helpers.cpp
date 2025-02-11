@@ -53,8 +53,8 @@ double dist_euclidean(arma::vec x, arma::vec y) {
 //'
 //' Given log(x) and log(y), return log(x+y)
 //'
-//' @param x A double value
-//' @param y A double value
+//' @param lx A double value in logspace
+//' @param ly A double value in logspace
 //' @return A numeric value
 //' @export
 // [[Rcpp::export]]
@@ -68,8 +68,8 @@ double logspace_sum(double lx, double ly) {
 //'
 //' Given log(x) and log(y), return log(x-y)
 //'
-//' @param x A double value
-//' @param y A double value
+//' @param lx A double value in logspace
+//' @param ly A double value in logspace
 //' @return A numeric value
 //' @export
 // [[Rcpp::export]]
@@ -245,13 +245,13 @@ arma::mat calc_init_param(arma::mat df, arma::mat tnew, arma::vec nearest_x) {
   return params;
 }
 
-//' Documentation Still Needed
+//' Calculate "A" Matrix
 //'
 //' This is a function that still needs to be documented properly.
 //'
-//' @param df A numeric matrix.
-//' @param tnew A numeric matrix.
-//' @param nearest_x A numeric vector.
+//' @param x_obs A numeric matrix containing unreduced data.
+//' @param mu A numeric matrix of component centers.
+//' @param sigma A numeric value denoting the bandwidth of density estimation.
 //'
 //' @return A numeric matrix.
 // [[Rcpp::export]]
