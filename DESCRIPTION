@@ -14,17 +14,14 @@ LinkingTo:
     RcppZiggurat,
     BH
 Imports: 
-    dimRed,
     ggplot2,
     magrittr,
     MASS,
     nloptr,
     plotly,
     purrr,
-    RANN,
     Rcpp,
     Rfast,
-    RSpectra,
     stats,
     tidyr,
     vctrs,

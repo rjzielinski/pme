@@ -19,7 +19,8 @@
 #'
 #' @return An object of type pme.
 #' @export
-pme <- function(data,
+pme <- function(
+    data,
     d,
     initialization = NULL,
     initialization_algorithm = "isomap",
@@ -33,7 +34,6 @@ pme <- function(data,
     SSD_ratio_threshold = 5,
     print_plots = FALSE,
     verbose = FALSE) {
-
   # Initial variable assignments --------------------------
   n <- dim(data)[1]
   D <- dim(data)[2]
@@ -340,51 +340,60 @@ initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_ty
   X <- centers
   I <- nrow(centers)
 
-  if (algorithm == "diffusion_maps") {
-    init_parameterization <- dimRed::embed(
-      X,
-      "DiffusionMaps",
-      ndim = d,
-      .mute = c("message", "output")
+  # if (algorithm == "diffusion_maps") {
+    # init_parameterization <- dimRed::embed(
+    #   X,
+    #   "DiffusionMaps",
+    #   ndim = d,
+    #   .mute = c("message", "output")
     )
-  # } else if (algorithm == "hessian_eigenmaps") {
-  #   init_parameterization <- dimRed::embed(
-  #     X,
-  #     "HLLE",
-  #     knn = floor(sqrt(nrow(X))),
-  #     ndim = d
-  #     # .mute = c("message", "output")
-  #   )
-  } else if (algorithm == "laplacian_eigenmaps") {
-    init_parameterization <- dimRed::embed(
-      X,
-      "LaplacianEigenmaps",
-      knn = floor(sqrt(nrow(X))),
-      ndim = d,
-      .mute = c("message", "output")
-    )
-  # } else if (algorithm == "lle") {
-  #   init_parameterization <- dimRed::embed(
-  #     X,
-  #     "LLE",
-  #     knn = floor(sqrt(nrow(X))),
-  #     ndim = d
-  #     # .mute = c("message", "output")
-  #   )
-  } else {
-    init_parameterization <- dimRed::embed(
-      X,
-      "Isomap",
-      knn = floor(sqrt(nrow(X))),
-      ndim = d,
-      .mute = c("message", "output")
-    )
-    # dissimilarity <- as.matrix(stats::dist(X))
-    # init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
-  }
+    # } else if (algorithm == "hessian_eigenmaps") {
+    #   init_parameterization <- dimRed::embed(
+    #     X,
+    #     "HLLE",
+    #     knn = floor(sqrt(nrow(X))),
+    #     ndim = d
+    #     # .mute = c("message", "output")
+    #   )
+  # } else if (algorithm == "laplacian_eigenmaps") {
+    # init_parameterization <- dimRed::embed(
+    #   X,
+    #   "LaplacianEigenmaps",
+    #   knn = floor(sqrt(nrow(X))),
+    #   ndim = d,
+    #   .mute = c("message", "output")
+    # )
+    # } else if (algorithm == "lle") {
+    #   init_parameterization <- dimRed::embed(
+    #     X,
+    #     "LLE",
+    #     knn = floor(sqrt(nrow(X))),
+    #     ndim = d
+    #     # .mute = c("message", "output")
+    #   )
+  # } else {
+    # init_parameterization <- dimRed::embed(
+    #   X,
+    #   "Isomap",
+    #   knn = floor(sqrt(nrow(X))),
+    #   ndim = d,
+    #   .mute = c("message", "output")
+    # )
+  #   dissimilarity <- as.matrix(stats::dist(X))
+  #   init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
+  # }
 
-  output <- dimRed::as.data.frame(init_parameterization) %>%
-    as.matrix()
+  dissimilarity <- as.matrix(stats::dist(X))
+  init_parameterization <- vegan::isomap(
+    dissimilarity,
+    ndim = d,
+    k = floor(sqrt(nrow(dissimilarity)))
+  )
+
+  # output <- dimRed::as.data.frame(init_parameterization) %>%
+  #   as.matrix()
+
+  output <- as.matrix(init_parameterization)
 
   list(
     parameterization = matrix(output[, 1:d], nrow = nrow(X)),
@@ -424,7 +433,7 @@ calc_params <- function(f, X, init_params) {
   params <- purrr::map(1:nrow(X), ~ projection_pme(X[.x, ], f, init_params[.x, ])) %>%
     unlist() %>%
     matrix(nrow = nrow(X), byrow = TRUE)
- params
+  params
 }
 
 #' Calculate Sum of Squared Distances

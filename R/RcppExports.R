@@ -37,8 +37,8 @@ dist_euclidean <- function(x, y) {
 #'
 #' Given log(x) and log(y), return log(x+y)
 #'
-#' @param x A double value
-#' @param y A double value
+#' @param lx A double value in logspace
+#' @param ly A double value in logspace
 #' @return A numeric value
 #' @export
 logspace_sum <- function(lx, ly) {
@@ -49,8 +49,8 @@ logspace_sum <- function(lx, ly) {
 #'
 #' Given log(x) and log(y), return log(x-y)
 #'
-#' @param x A double value
-#' @param y A double value
+#' @param lx A double value in logspace
+#' @param ly A double value in logspace
 #' @return A numeric value
 #' @export
 logspace_diff <- function(lx, ly) {
@@ -147,13 +147,13 @@ calc_init_param <- function(df, tnew, nearest_x) {
     .Call(`_pme_calc_init_param`, df, tnew, nearest_x)
 }
 
-#' Documentation Still Needed
+#' Calculate "A" Matrix
 #'
 #' This is a function that still needs to be documented properly.
 #'
-#' @param df A numeric matrix.
-#' @param tnew A numeric matrix.
-#' @param nearest_x A numeric vector.
+#' @param x_obs A numeric matrix containing unreduced data.
+#' @param mu A numeric matrix of component centers.
+#' @param sigma A numeric value denoting the bandwidth of density estimation.
 #'
 #' @return A numeric matrix.
 calc_A <- function(x_obs, mu, sigma) {
