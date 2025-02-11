@@ -393,7 +393,8 @@ initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_ty
   # output <- dimRed::as.data.frame(init_parameterization) %>%
   #   as.matrix()
 
-  output <- as.matrix(init_parameterization)
+  output <- init_parameterization$points |>
+    as.matrix()
 
   list(
     parameterization = matrix(output[, 1:d], nrow = nrow(X)),
