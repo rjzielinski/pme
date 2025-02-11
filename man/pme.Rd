@@ -11,7 +11,7 @@ pme(
   initialization_algorithm = "isomap",
   initialization_type = "centers",
   lambda = exp(-15:5),
-  alpha = 0.05,
+  alpha = 0.01,
   min_clusters = 0,
   max_clusters = 100,
   epsilon = 0.05,
