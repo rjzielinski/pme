@@ -16,16 +16,16 @@ smoothing_kernel <- function(x, mu, sigma) {
 
 
 #' Smoothing Kernel for Density Estimation
-#' 
+#'
 #' Implements Gaussian kernel smoothing on log-scale
-#' 
+#'
 #' @param x A vector of numeric values.
 #' @param mu The mean of the Gaussian density
 #' @param sigma The standard deviation of the Gaussian density
-#' 
+#'
 #' @return A numeric value
 #' @export
-#' 
+#'
 log_smoothing_kernel_r <- function(x, mu, sigma) {
   yseq <- stats::dnorm((x - mu) / sigma)
   output <- (-length(x) * log(sigma)) + sum(log(yseq))
@@ -43,8 +43,7 @@ log_smoothing_kernel_r <- function(x, mu, sigma) {
 #' @param D The dimension of the higher dimensional space.
 #'
 #' @return A numeric matrix.
-#'
-#' @noRd
+#' @export
 solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
   M1 <- cbind(
     2 * E %*% W %*% E + 2 * w * E,
@@ -82,8 +81,7 @@ solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
 #' @param D The dimension of the output.
 #'
 #' @return A numeric matrix of coefficients.
-#'
-#' @noRd
+#' @export
 solve_spline <- function(E, t_val, X, w, d, D) {
   M1 <- cbind(E + (w * diag(rep(1, nrow(t_val)))), t_val)
   M2 <- cbind(t(t_val), matrix(0, ncol = d + 1, nrow = d + 1))
@@ -113,19 +111,19 @@ projection_pme <- function(x, f, initial_guess) {
 
   if (inherits(nlm_est, "try-error")) {
     opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-10)
-     nlopt_est <- try(
-       nloptr::nloptr(
+    nlopt_est <- try(
+      nloptr::nloptr(
         x0 <- initial_guess,
         function(t) dist_euclidean(x = x, f(t)),
         opts = opts
       ),
       silent = TRUE
-     )
-     if (inherits(nlopt_est, "try-error")) {
-       return(NULL)
-     } else {
-       return(nlopt_est$solution)
-     }
+    )
+    if (inherits(nlopt_est, "try-error")) {
+      return(NULL)
+    } else {
+      return(nlopt_est$solution)
+    }
   } else {
     return(nlm_est$estimate)
   }
