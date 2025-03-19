@@ -168,6 +168,8 @@ double eta_kernel(arma::vec t, int lambda) {
 //' @param lambda Number of dimensions.
 //'
 //' @return A numeric matrix.
+//' @export
+//'
 // [[Rcpp::export]]
 arma::mat calcE(arma::mat x, int lambda) {
   int nrow = x.n_rows;

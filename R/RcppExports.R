@@ -103,6 +103,8 @@ eta_kernel <- function(t, lambda) {
 #' @param lambda Number of dimensions.
 #'
 #' @return A numeric matrix.
+#' @export
+#'
 calcE <- function(x, lambda) {
     .Call(`_pme_calcE`, x, lambda)
 }
