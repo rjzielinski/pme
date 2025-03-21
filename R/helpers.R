@@ -44,7 +44,7 @@ log_smoothing_kernel_r <- function(x, mu, sigma) {
 #'
 #' @return A numeric matrix.
 #' @export
-solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
+solve_weighted_spline_r <- function(E, W, t_val, X, w, d, D) {
   M1 <- cbind(
     2 * E %*% W %*% E + 2 * w * E,
     2 * E %*% W %*% t_val,

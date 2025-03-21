@@ -327,3 +327,33 @@ arma::vec calc_weights_cpp(arma::mat x_obs, arma::mat mu, double sigma, double e
 //  }
 //  bound_theta(theta_new)
 //}
+
+//' Find the Coefficients of a Weighted Spline Function
+//'
+//' @param E A numeric matrix.
+//' @param W A numeric matrix.
+//' @param t_val A numeric matrix.
+//' @param X A numeric matrix.
+//' @param w The smoothing parameter.
+//' @param d The intrinsic dimension.
+//' @param D The dimension of the higher dimensional space.
+//'
+//' @return A numeric matrix.
+// [[Rcpp::export]]
+arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D) {
+  arma::mat M1 = join_rows(2 * E * W * E + (2 * w * E), 2 * E * W * t_val);
+  M1 = join_rows(M1, t_val);
+  arma::mat M2 = join_rows(2 * t_val.t() * W * E, 2 * t_val.t() * W * t_val);
+  arma::mat zero_mat = arma::zeros(d + 1, d + 1);
+  M2 = join_rows(M2, zero_mat);
+  arma::mat M3 = join_rows(t_val.t(), zero_mat);
+  M3 = join_rows(M3, zero_mat);
+  arma::mat M = join_cols(M1, M2);
+  M = join_cols(M, M3);
+  arma::mat b = join_cols(2 * E * W * X, 2 * t_val.t() * W * X);
+  arma::mat zero_mat2 = arma::zeros(d + 1, D);
+  b = join_cols(b, zero_mat2);
+  arma::mat sol = arma::pinv(M) * b;
+  return sol;
+}
+
