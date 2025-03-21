@@ -186,6 +186,7 @@ calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
 #' @param D The dimension of the higher dimensional space.
 #'
 #' @return A numeric matrix.
+#' @export
 solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
     .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
 }

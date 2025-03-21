@@ -339,6 +339,7 @@ arma::vec calc_weights_cpp(arma::mat x_obs, arma::mat mu, double sigma, double e
 //' @param D The dimension of the higher dimensional space.
 //'
 //' @return A numeric matrix.
+//' @export
 // [[Rcpp::export]]
 arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D) {
   arma::mat M1 = join_rows(2 * E * W * E + (2 * w * E), 2 * E * W * t_val);
