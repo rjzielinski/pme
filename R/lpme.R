@@ -19,22 +19,24 @@
 #'
 #' @return An object with class "lpme".
 #' @export
-new_lpme <- function(embedding_map,
-                     msd,
-                     coefficients,
-                     times,
-                     initial_parameterization,
-                     optimal_parameterization,
-                     d,
-                     D,
-                     n_knots,
-                     lambda,
-                     gamma,
-                     coefficient_list,
-                     coefficient_functions,
-                     parameterization_list,
-                     smoothing_method,
-                     initialization_algorithm) {
+new_lpme <- function(
+  embedding_map,
+  msd,
+  coefficients,
+  times,
+  initial_parameterization,
+  optimal_parameterization,
+  d,
+  D,
+  n_knots,
+  lambda,
+  gamma,
+  coefficient_list,
+  coefficient_functions,
+  parameterization_list,
+  smoothing_method,
+  initialization_algorithm
+) {
   lpme_list <- list(
     embedding_map = embedding_map,
     d = d,
@@ -87,22 +89,24 @@ is_lpme <- function(x) {
 #'
 #' @return An object of type "lpme".
 #' @export
-lpme <- function(data,
-                 d,
-                 smoothing_method = "spline",
-                 gamma = NULL,
-                 lambda = NULL,
-                 initialization_algorithm = "isomap",
-                 init_type = "centers",
-                 alpha = 0.05,
-                 min_clusters = 0,
-                 max_clusters = 500,
-                 epsilon = 0.05,
-                 max_iter = 100,
-                 verbose = TRUE,
-                 print_plots = TRUE,
-                 increase_threshold = 1.05,
-                 init = "full") {
+lpme <- function(
+  data,
+  d,
+  smoothing_method = "spline",
+  gamma = NULL,
+  lambda = NULL,
+  initialization_algorithm = "isomap",
+  init_type = "centers",
+  alpha = 0.05,
+  min_clusters = 0,
+  max_clusters = 500,
+  epsilon = 0.05,
+  max_iter = 100,
+  verbose = TRUE,
+  print_plots = TRUE,
+  increase_threshold = 1.05,
+  init = "full"
+) {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
   min_observations <- nrow(data)
@@ -140,7 +144,14 @@ lpme <- function(data,
     initialization = initialization_algorithm
   )
 
-  init_pme_list <- fit_init_pmes(data, time_points, init, initialization, d, lambda)
+  init_pme_list <- fit_init_pmes(
+    data,
+    time_points,
+    init,
+    initialization,
+    d,
+    lambda
+  )
   splines <- merge_spline_coefs(init_pme_list, d, time_points)
 
   spline_coefficients <- splines$coef_full
@@ -186,8 +197,10 @@ lpme <- function(data,
       f_new <- function(t) {
         coefs <- f_coef_list$f(t[1])
         coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
-        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], t_initial, 4 - d) +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*%
+          etaFunc(t[-1], t_initial, 4 - d) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
+            matrix(c(1, t[-1]), ncol = 1)
         c(t[1], return_vec)
       }
     } else if (smoothing_method == "gp") {
@@ -234,7 +247,11 @@ lpme <- function(data,
 
     # Cross-validation section
     nearest_x <- calc_nearest_x(data, x_merged)
-    init_param <- calc_init_param(data, updated_param$parameterization, nearest_x)
+    init_param <- calc_init_param(
+      data,
+      updated_param$parameterization,
+      nearest_x
+    )
 
     cv_mse <- calc_mse_cv(
       leave_one_out = TRUE,
@@ -333,8 +350,10 @@ embed <- function(object, x) {
   nu <- 4 - object$d
   f_coef <- function(t) {
     vec <- as.vector(
-      t(object$sol_coef[1:n_times, ]) %*% etaFunc(t, as.matrix(object$times, ncol = 1), 3) +
-        t(object$sol_coef[(n_times + 1):(n_times + 2), ]) %*% matrix(c(1, t), ncol = 1)
+      t(object$sol_coef[1:n_times, ]) %*%
+        etaFunc(t, as.matrix(object$times, ncol = 1), 3) +
+        t(object$sol_coef[(n_times + 1):(n_times + 2), ]) %*%
+          matrix(c(1, t), ncol = 1)
     )
     return(vec)
   }
@@ -342,8 +361,10 @@ embed <- function(object, x) {
   coefs <- f_coef(x[1])
   coef_mat <- matrix(coefs, object$n_knots + object$d + 1, byrow = TRUE)
   vec <- as.vector(
-    t(coef_mat[1:object$n_knots, ]) %*% etaFunc(x[-1], object$r_init, nu) +
-      t(coef_mat[(object$n_knots + 1):(object$n_knots + object$d + 1), ]) %*% matrix(c(1, x[-1]), ncol = 1)
+    t(coef_mat[1:object$n_knots, ]) %*%
+      etaFunc(x[-1], object$r_init, nu) +
+      t(coef_mat[(object$n_knots + 1):(object$n_knots + object$d + 1), ]) %*%
+        matrix(c(1, x[-1]), ncol = 1)
   )
   return(c(x[1], vec))
 }
@@ -354,17 +375,39 @@ parameterize <- function(object, x) {
     ~ embed(object, object$r_fit[.x, ])
   ) %>%
     purrr::reduce(rbind)
-  nearest <- calc_nearest_x(matrix(x, nrow = 1), embeddings[embeddings[, 1] == x[1], ])
-  estimate <- projection_lpme(x, function(t) embed(object, t), object$r_fit[object$r_fit[, 1] == x[1], ][nearest, ])
+  nearest <- calc_nearest_x(
+    matrix(x, nrow = 1),
+    embeddings[embeddings[, 1] == x[1], ]
+  )
+  estimate <- projection_lpme(
+    x,
+    function(t) embed(object, t),
+    object$r_fit[object$r_fit[, 1] == x[1], ][nearest, ]
+  )
 
   return(estimate)
 }
 
-initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp, initialization, initialization_type) {
+initialize_lpme <- function(
+  df,
+  init,
+  time_points,
+  d,
+  alpha,
+  max_comp,
+  min_comp,
+  initialization,
+  initialization_type
+) {
   if (init %in% c("first", "full")) {
     if (init == "first") {
       init_df <- df[df[, 1] == time_points[1], -1]
-      init_pme <- pme(init_df, d, initialization_algorithm = initialization, initialization_type = initialization_type)
+      init_pme <- pme(
+        init_df,
+        d,
+        initialization_algorithm = initialization,
+        initialization_type = initialization_type
+      )
       init_pme_center_order <- order(init_pme$knots$centers[, 1])
       init_pme_centers <- init_pme$knots$centers[init_pme_center_order, ]
 
@@ -391,17 +434,28 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp,
 
         nearest_clusters <- purrr::map(
           1:nrow(init_centers[[idx]]),
-          ~ which.min(as.vector(apply(init_pme_centers, 1, dist_euclidean, y = init_centers[[idx]][.x, ])))
+          ~ which.min(as.vector(apply(
+            init_pme_centers,
+            1,
+            dist_euclidean,
+            y = init_centers[[idx]][.x, ]
+          )))
         ) %>%
           purrr::reduce(c)
 
         opt_run <- which.min(init_pme$MSD)
-        params_init <- init_pme$parameterization[[opt_run]][nearest_clusters, ] %>%
+        params_init <- init_pme$parameterization[[opt_run]][
+          nearest_clusters,
+        ] %>%
           matrix(nrow = nrow(init_centers[[idx]]), byrow = TRUE)
 
         init_parameterization[[idx]] <- purrr::map(
           1:nrow(init_centers[[idx]]),
-          ~ projection_pme(init_centers[[idx]][.x, ], init_pme$embedding_map, params_init[.x, ])
+          ~ projection_pme(
+            init_centers[[idx]][.x, ],
+            init_pme$embedding_map,
+            params_init[.x, ]
+          )
         ) %>%
           purrr::reduce(rbind)
       }
@@ -464,8 +518,6 @@ initialize_lpme <- function(df, init, time_points, d, alpha, max_comp, min_comp,
         isomap = init_isomap
       )
     }
-
-
 
     return(init_list)
   } else {
@@ -539,8 +591,12 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
     } else {
       clusters[[idx]] <- pme_results[[idx]]$knots$cluster + sum(num_clusters)
     }
-    kernel_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][1:num_clusters[idx], ]
-    polynomial_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][(num_clusters[idx] + 1):(num_clusters[idx] + d + 2), ] %>%
+    kernel_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][
+      1:num_clusters[idx],
+    ]
+    polynomial_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][
+      (num_clusters[idx] + 1):(num_clusters[idx] + d + 2),
+    ] %>%
       t() %>%
       matrix(nrow = 1)
     embeddings[[idx]] <- apply(
@@ -594,7 +650,14 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
     R <- cbind(rep(1, n_knots), params)
     E <- calcE(params, 4 - d)
 
-    spline_coefs[[time_idx]] <- solve_spline(E, R, output, lambda[time_idx], ncol(params), ncol(output)) %>%
+    spline_coefs[[time_idx]] <- solve_spline(
+      E,
+      R,
+      output,
+      lambda[time_idx],
+      ncol(params),
+      ncol(output)
+    ) %>%
       t() %>%
       matrix(nrow = 1)
   }
@@ -612,18 +675,38 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
   out_list
 }
 
-compute_f_coef <- function(w_new, W, t_new, r_full2, coef_full, d_new2, D_coef, gamma, gamma2) {
+compute_f_coef <- function(
+  w_new,
+  W,
+  t_new,
+  r_full2,
+  coef_full,
+  d_new2,
+  D_coef,
+  gamma,
+  gamma2
+) {
   T_new <- cbind(rep(1, nrow(t_new)), t_new)
   T_new2 <- cbind(rep(1, nrow(r_full2)), r_full2)
 
   E_new <- calcE(t_new, gamma)
   E_new2 <- calcE(r_full2, gamma2)
 
-  sol_coef <- solve_weighted_spline(E_new2, W, T_new2, coef_full, w_new, d_new2, D_coef)
+  sol_coef <- solve_weighted_spline(
+    E_new2,
+    W,
+    T_new2,
+    coef_full,
+    w_new,
+    d_new2,
+    D_coef
+  )
   f_coef <- function(t) {
     return_vec <- as.vector(
-      t(sol_coef[1:nrow(coef_full), ]) %*% etaFunc(t, r_full2, gamma2) +
-        t(sol_coef[(nrow(coef_full) + 1):(nrow(coef_full) + d_new2 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+      t(sol_coef[1:nrow(coef_full), ]) %*%
+        etaFunc(t, r_full2, gamma2) +
+        t(sol_coef[(nrow(coef_full) + 1):(nrow(coef_full) + d_new2 + 1), ]) %*%
+          matrix(c(1, t), ncol = 1)
     )
     return_vec
   }
@@ -732,7 +815,16 @@ calc_SSD <- function(X, r, f) {
   SSD_val
 }
 
-update_parameterization <- function(time_points, r, X, f, n_knots, d, d2, gamma) {
+update_parameterization <- function(
+  time_points,
+  r,
+  X,
+  f,
+  n_knots,
+  d,
+  d2,
+  gamma
+) {
   full_r <- tidyr::expand_grid(time_points, r) %>%
     as.matrix(ncol = d + 1)
   new_param <- purrr::map(
@@ -750,7 +842,28 @@ update_parameterization <- function(time_points, r, X, f, n_knots, d, d2, gamma)
   )
 }
 
-calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_initial, n_knots, d, d_new, d_new2, D_out, D_coef, lambda, gamma, gamma2, r_full2, w, smoothing_method) {
+calc_mse_cv <- function(
+  leave_one_out,
+  k,
+  f,
+  df,
+  init_param,
+  time_points,
+  r,
+  r_initial,
+  n_knots,
+  d,
+  d_new,
+  d_new2,
+  D_out,
+  D_coef,
+  lambda,
+  gamma,
+  gamma2,
+  r_full2,
+  w,
+  smoothing_method
+) {
   if (leave_one_out == TRUE) {
     k <- length(time_points)
     folds <- sample(
@@ -808,8 +921,10 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
 
       f_coef_cv <- function(t) {
         return_vec <- as.vector(
-          t(sol_coef_cv[1:nrow(coef_cv), ]) %*% etaFunc(t, r_cv, gamma2) +
-            t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + 1 + 1), ]) %*% matrix(c(1, t), ncol = 1)
+          t(sol_coef_cv[1:nrow(coef_cv), ]) %*%
+            etaFunc(t, r_cv, gamma2) +
+            t(sol_coef_cv[(nrow(coef_cv) + 1):(nrow(coef_cv) + 1 + 1), ]) %*%
+              matrix(c(1, t), ncol = 1)
         )
         return_vec
       }
@@ -817,8 +932,10 @@ calc_mse_cv <- function(leave_one_out, k, f, df, init_param, time_points, r, r_i
       f_new_cv <- function(t) {
         coefs <- f_coef_cv(t[1])
         coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
-        return_vec <- t(coef_mat[1:n_knots, ]) %*% etaFunc(t[-1], r_initial, gamma) +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*% matrix(c(1, t[-1]), ncol = 1)
+        return_vec <- t(coef_mat[1:n_knots, ]) %*%
+          etaFunc(t[-1], r_initial, gamma) +
+          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
+            matrix(c(1, t[-1]), ncol = 1)
         return(c(t[1], return_vec))
       }
     } else if (smoothing_method == "gp") {
