@@ -141,7 +141,8 @@ lpme <- function(
     alpha,
     max_clusters,
     min_clusters,
-    initialization = initialization_algorithm
+    initialization = initialization_algorithm,
+    initialization_type = init_type
   )
 
   init_pme_list <- fit_init_pmes(
@@ -484,7 +485,7 @@ initialize_lpme <- function(
       } else {
         init_N0 <- min_comp
       }
-      for (idx in 1:length(time_points)) {
+      for (idx in seq_along(time_points)) {
         init_df_temp <- df[df[, 1] == time_points[idx], -1]
         init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
         est_temp_order <- order(init_est_temp$mu[, 1])
