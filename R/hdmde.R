@@ -72,9 +72,13 @@ hdmde_mod <- function(x_obs, N0, alpha, max_comp) {
     component_estimates <- components_new
   }
 
-  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
+  new_hdmde(
+    components_new$mu,
+    components_new$sigma,
+    components_new$theta_hat,
+    components_new$km
+  )
 }
-
 
 
 #' High-Dimensional Mixture Density Estimation
@@ -136,7 +140,10 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 
     log_diff_sq <- purrr::map(
       1:n,
-      ~ logspace_diff(logspace_sum(2 * log_p_new[.x], 2 * log_p_old[.x]), log(2) + log_p_new[.x] + log_p_old[.x])
+      ~ logspace_diff(
+        logspace_sum(2 * log_p_new[.x], 2 * log_p_old[.x]),
+        log(2) + log_p_new[.x] + log_p_old[.x]
+      )
     ) %>%
       unlist()
 
@@ -146,13 +153,17 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     log_mean_diff <- logspace_diff(
       logspace_sum_vec(log_difference[p_new_improve]),
       logspace_sum_vec(log_difference[p_old_improve])
-    ) - log(n)
+    ) -
+      log(n)
 
     # we have log difference values, but they are 0 after exponentiating
     # difference <- p_new - p_old
 
     # log_mean_diff <- logspace_sum_vec(log_difference) - log(length(log_difference))
-    log_residuals <- purrr::map(1:n, ~ logspace_diff(log_difference[.x], log_mean_diff)) %>%
+    log_residuals <- purrr::map(
+      1:n,
+      ~ logspace_diff(log_difference[.x], log_mean_diff)
+    ) %>%
       unlist()
     # log_sigma_hat_sq <- 2 * logspace_sum_vec(log_difference) - 2 * logspace_sum_vec(log_mean_diff)
     log_sigma_hat_sq <- purrr::map(
@@ -172,11 +183,15 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     log_p_old <- log_p_new
   }
 
-  new_hdmde(components_new$mu, components_new$sigma, components_new$theta_hat, components_new$km)
+  new_hdmde(
+    components_new$mu,
+    components_new$sigma,
+    components_new$theta_hat,
+    components_new$km
+  )
 }
 
 # HDMDE HELPER FUNCTIONS -------------------------------------------------------
-
 
 #' Compute Mixture Component Estimates
 #'
@@ -195,7 +210,7 @@ compute_estimates <- function(x, n) {
     x,
     n,
     iter.max = 10000,
-    nstart = 1000,
+    nstart = 25,
     algorithm = "MacQueen"
   )
   mu <- km$centers
@@ -263,7 +278,6 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
   count <- 0
   lambda_hat_old <- c(n, rep(-1, D))
 
-
   while ((abs_diff > epsilon) & (count <= max_iter)) {
     W <- t(t(A) + log(theta_old))
     W_adj <- W - apply(W, 1, logspace_sum_vec)
@@ -286,7 +300,8 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
       w = exp(w),
       iterlim = 10000
     )$estimate
-    theta_new <- exp(w) / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
+    theta_new <- exp(w) /
+      Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
     theta_new2 <- theta_new / sum(theta_new)
 
     abs_diff <- dist_euclidean(theta_new, theta_old)
