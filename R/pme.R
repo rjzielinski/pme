@@ -20,20 +20,21 @@
 #' @return An object of type pme.
 #' @export
 pme <- function(
-    data,
-    d,
-    initialization = NULL,
-    initialization_algorithm = "isomap",
-    initialization_type = "centers",
-    lambda = exp(-15:5),
-    alpha = 0.01,
-    min_clusters = 0,
-    max_clusters = 100,
-    epsilon = 0.05,
-    max_iter = 100,
-    SSD_ratio_threshold = 5,
-    print_plots = FALSE,
-    verbose = FALSE) {
+  data,
+  d,
+  initialization = NULL,
+  initialization_algorithm = "isomap",
+  initialization_type = "centers",
+  lambda = exp(-15:5),
+  alpha = 0.01,
+  min_clusters = 0,
+  max_clusters = 100,
+  epsilon = 0.05,
+  max_iter = 100,
+  SSD_ratio_threshold = 5,
+  print_plots = FALSE,
+  verbose = FALSE
+) {
   # Initial variable assignments --------------------------
   n <- dim(data)[1]
   D <- dim(data)[2]
@@ -90,7 +91,8 @@ pme <- function(
     f_embedding <- function(parameters) {
       as.vector(
         (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
-          (t(spline_coefs[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+          (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
+            matrix(c(1, parameters), ncol = 1))
       )
     }
 
@@ -107,7 +109,11 @@ pme <- function(
       plot_pme(f_embedding, data, X, spline_coefs, params, d)
     }
 
-    while ((SSD_ratio > epsilon) & (SSD_ratio <= SSD_ratio_threshold) & (count <= (max_iter - 1))) {
+    while (
+      (SSD_ratio > epsilon) &
+        (SSD_ratio <= SSD_ratio_threshold) &
+        (count <= (max_iter - 1))
+    ) {
       SSD_prev <- SSD
       f0 <- f_embedding
       params_prev <- params
@@ -123,7 +129,8 @@ pme <- function(
       f_embedding <- function(parameters) {
         as.vector(
           (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
-            (t(spline_coefs[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+            (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
+              matrix(c(1, parameters), ncol = 1))
         )
       }
 
@@ -137,7 +144,6 @@ pme <- function(
       if (print_plots == TRUE) {
         plot_pme(f_embedding, data, X, spline_coefs, params, d)
       }
-
 
       if (SSD_ratio > SSD_ratio_threshold) {
         f_embedding <- f0
@@ -155,16 +161,31 @@ pme <- function(
       plot_pme(f_embedding, data, X, spline_coefs, params, d)
     }
 
-    mse[tuning_idx] <- calc_msd(data, initialization$km, f_embedding, params, D, d)
+    mse[tuning_idx] <- calc_msd(
+      data,
+      initialization$km,
+      f_embedding,
+      params,
+      D,
+      d
+    )
     if (verbose == TRUE) {
-      print(paste("When lambda = ", as.character(lambda[tuning_idx]), ", MSD = ", as.character(mse[tuning_idx]), "."))
+      print(paste(
+        "When lambda = ",
+        as.character(lambda[tuning_idx]),
+        ", MSD = ",
+        as.character(mse[tuning_idx]),
+        "."
+      ))
     }
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
     embeddings[[tuning_idx]] <- function(parameters) {
       as.vector(
-        (t(coefs[[tuning_idx]][1:I, ]) %*% etaFunc(parameters, parameterization[[tuning_idx]], 4 - d)) +
-          (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+        (t(coefs[[tuning_idx]][1:I, ]) %*%
+          etaFunc(parameters, parameterization[[tuning_idx]], 4 - d)) +
+          (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*%
+            matrix(c(1, parameters), ncol = 1))
       )
     }
 
@@ -181,7 +202,8 @@ pme <- function(
   embedding_opt <- function(parameters) {
     as.vector(
       (t(coefs_opt[1:I, ]) %*% etaFunc(parameters, params_opt, 4 - d)) +
-        (t(coefs_opt[(I + 1):(I + d + 1), ]) %*% matrix(c(1, parameters), ncol = 1))
+        (t(coefs_opt[(I + 1):(I + d + 1), ]) %*%
+          matrix(c(1, parameters), ncol = 1))
     )
   }
 
@@ -239,18 +261,20 @@ pme <- function(
 #' @return An object of type PME.
 #'
 #' @noRd
-new_pme <- function(embedding_map,
-                    knots,
-                    knot_weights,
-                    kernel_coefs,
-                    polynomial_coefs,
-                    tuning,
-                    MSD,
-                    coefs,
-                    parameterization,
-                    tuning_vec,
-                    embeddings,
-                    initialization_algorithm) {
+new_pme <- function(
+  embedding_map,
+  knots,
+  knot_weights,
+  kernel_coefs,
+  polynomial_coefs,
+  tuning,
+  MSD,
+  coefs,
+  parameterization,
+  tuning_vec,
+  embeddings,
+  initialization_algorithm
+) {
   pme_list <- list(
     embedding_map = embedding_map,
     knots = knots,
@@ -295,7 +319,16 @@ is_pme <- function(x) {
 #' @return A list used to initialize PME.
 #'
 #' @noRd
-initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_type = "centers", algorithm = "isomap", subsample_size = 5) {
+initialize_pme <- function(
+  x,
+  d,
+  min_clusters,
+  alpha,
+  max_clusters,
+  component_type = "centers",
+  algorithm = "isomap",
+  subsample_size = 5
+) {
   est <- hdmde_mod(x, min_clusters, alpha, max_clusters)
   if (component_type == "subsample") {
     cluster_points <- matrix(nrow = 1, ncol = ncol(x))
@@ -387,7 +420,11 @@ initialize_pme <- function(x, d, min_clusters, alpha, max_clusters, component_ty
   init_parameterization <- vegan::isomap(
     dissimilarity,
     ndim = d,
-    k = floor(sqrt(nrow(dissimilarity)))
+    k = min(
+      floor(nrow(dissimilarity) / 2),
+      2 * ceiling(sqrt(nrow(dissimilarity)))
+    ),
+    fragmentedOK = TRUE
   )
 
   # output <- dimRed::as.data.frame(init_parameterization) %>%
@@ -431,7 +468,10 @@ calc_coefficients <- function(X, t, weights, w) {
 #'
 #' @noRd
 calc_params <- function(f, X, init_params) {
-  params <- purrr::map(1:nrow(X), ~ projection_pme(X[.x, ], f, init_params[.x, ])) %>%
+  params <- purrr::map(
+    1:nrow(X),
+    ~ projection_pme(X[.x, ], f, init_params[.x, ])
+  ) %>%
     unlist() %>%
     matrix(nrow = nrow(X), byrow = TRUE)
   params
@@ -579,7 +619,11 @@ calc_msd <- function(x, km, f, t, D, d) {
   data_initial <- data_initial[-1, ]
   proj_para <- purrr::map(
     1:nrow(data_initial),
-    ~ projection_pme(data_initial[.x, 1:D], f, data_initial[.x, (D + 1):(D + d)]) %>%
+    ~ projection_pme(
+      data_initial[.x, 1:D],
+      f,
+      data_initial[.x, (D + 1):(D + d)]
+    ) %>%
       t()
   ) %>%
     purrr::reduce(rbind)
