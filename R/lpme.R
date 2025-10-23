@@ -131,6 +131,9 @@ lpme <- function(
 
   if (min_clusters == 0) {
     min_clusters <- 10 * d
+    if (min_clusters >= max_clusters) {
+      min_clusters <- 5 * d
+    }
   }
 
   initialization <- initialize_lpme(
