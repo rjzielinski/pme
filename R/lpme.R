@@ -105,7 +105,8 @@ lpme <- function(
   verbose = TRUE,
   print_plots = TRUE,
   increase_threshold = 1.05,
-  init = "full"
+  init = "full",
+  init_neighbors = NA
 ) {
   # Declare initial variable values ---------------------------------------
   time_points <- unique(data[, 1])
@@ -136,6 +137,13 @@ lpme <- function(
     }
   }
 
+  if (is.na(init_neighbors)) {
+    init_neighbors <- length(time_points) *
+      floor(sqrt(nrow(data) / length(time_points)))
+  }
+  neighbors <- length(time_points) *
+    floor(sqrt(nrow(init_dissimilarity_matrix) / length(time_points)))
+
   initialization <- initialize_lpme(
     data,
     init,
@@ -145,7 +153,8 @@ lpme <- function(
     max_clusters,
     min_clusters,
     initialization = initialization_algorithm,
-    initialization_type = init_type
+    initialization_type = init_type,
+    neighbors = init_neighbors
   )
 
   init_pme_list <- fit_init_pmes(
@@ -401,7 +410,8 @@ initialize_lpme <- function(
   max_comp,
   min_comp,
   initialization,
-  initialization_type
+  initialization_type,
+  neighbors = 10
 ) {
   if (init %in% c("first", "full")) {
     if (init == "first") {
@@ -488,6 +498,7 @@ initialize_lpme <- function(
       } else {
         init_N0 <- min_comp
       }
+
       for (idx in seq_along(time_points)) {
         init_df_temp <- df[df[, 1] == time_points[idx], -1]
         init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
@@ -511,8 +522,9 @@ initialize_lpme <- function(
       init_isomap <- vegan::isomap(
         init_dissimilarity_matrix,
         ndim = d,
-        k = floor(sqrt(nrow(init_dissimilarity_matrix)))
+        k = neighbors
       )
+
       init_list <- list(
         timevals = init_timevals,
         theta_hat = init_theta_hat,
