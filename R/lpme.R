@@ -141,8 +141,6 @@ lpme <- function(
     init_neighbors <- length(time_points) *
       floor(sqrt(nrow(data) / length(time_points)))
   }
-  neighbors <- length(time_points) *
-    floor(sqrt(nrow(init_dissimilarity_matrix) / length(time_points)))
 
   initialization <- initialize_lpme(
     data,
