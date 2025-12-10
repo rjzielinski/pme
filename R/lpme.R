@@ -137,11 +137,6 @@ lpme <- function(
     }
   }
 
-  if (is.na(init_neighbors)) {
-    init_neighbors <- length(time_points) *
-      floor(sqrt(nrow(data) / length(time_points)))
-  }
-
   initialization <- initialize_lpme(
     data,
     init,
@@ -409,7 +404,7 @@ initialize_lpme <- function(
   min_comp,
   initialization,
   initialization_type,
-  neighbors = 10
+  neighbors = NA
 ) {
   if (init %in% c("first", "full")) {
     if (init == "first") {
@@ -516,6 +511,13 @@ initialize_lpme <- function(
       init_X <- init_centers
       init_I <- length(init_theta_hat)
 
+      if (is.na(neighbors)) {
+        # if centers are sparse, make sure isomap finds links between centers
+        # not just across time points
+        centers_per_time <- nrow(init_centers) / length(time_points)
+        neighbors <- floor(sqrt(centers_per_time)) * length(time_points)
+      }
+
       init_dissimilarity_matrix <- as.matrix(stats::dist(init_X))
       init_isomap <- vegan::isomap(
         init_dissimilarity_matrix,
@@ -554,6 +556,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
 
   for (idx in seq_along(time_points)) {
     df_temp <- df[df[, 1] == time_points[idx], ]
+
     if (init_option == "full") {
       pme_results[[idx]] <- pme(
         data = df_temp[, -1],
@@ -637,6 +640,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
     num_clusters = num_clusters,
     errors = errors
   )
+
   init_pme_list
 }
 
