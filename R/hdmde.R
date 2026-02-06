@@ -114,9 +114,9 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
   ) %>%
     unlist()
 
-  test_rejection <- FALSE
+  test_rejection <- TRUE
 
-  while ((test_rejection == FALSE) & (N < min(n - 1, max_comp))) {
+  while ((test_rejection == TRUE) & (N < min(n - 1, max_comp))) {
     N <- N + 1
     components_new <- compute_estimates(x_obs, N)
     log_p_new <- purrr::map(
@@ -150,35 +150,41 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     log_mean_diff <- 0
     p_new_improve <- which(diff_ind)
     p_old_improve <- which(!diff_ind)
-    log_mean_diff <- logspace_diff(
-      logspace_sum_vec(log_difference[p_new_improve]),
-      logspace_sum_vec(log_difference[p_old_improve])
-    ) -
-      log(n)
+    # log_mean_diff <- logspace_diff(
+    #   logspace_sum_vec(log_difference[p_new_improve]),
+    #   logspace_sum_vec(log_difference[p_old_improve])
+    # ) -
+    #   log(n)
+
+    mean_diff <- mean(exp(log_difference))
+
+    residuals <- exp(log_difference) - mean_diff
+    sigma_hat_sq <- mean(residuals^2)
 
     # we have log difference values, but they are 0 after exponentiating
     # difference <- p_new - p_old
 
     # log_mean_diff <- logspace_sum_vec(log_difference) - log(length(log_difference))
-    log_residuals <- purrr::map(
-      1:n,
-      ~ logspace_diff(log_difference[.x], log_mean_diff)
-    ) %>%
-      unlist()
-    # log_sigma_hat_sq <- 2 * logspace_sum_vec(log_difference) - 2 * logspace_sum_vec(log_mean_diff)
-    log_sigma_hat_sq <- purrr::map(
-      1:n,
-      ~ logspace_diff(log_diff_sq[.x], 2 * log_mean_diff)
-    ) %>%
-      unlist() %>%
-      logspace_sum_vec()
-    log_sigma_hat_sq <- log_sigma_hat_sq - log(n)
-
+    # log_residuals <- purrr::map(
+    #   1:n,
+    #   ~ logspace_diff(log_difference[.x], log_mean_diff)
+    # ) %>%
+    #   unlist()
+    # # log_sigma_hat_sq <- 2 * logspace_sum_vec(log_difference) - 2 * logspace_sum_vec(log_mean_diff)
+    # log_sigma_hat_sq <- purrr::map(
+    #   1:n,
+    #   ~ logspace_diff(log_diff_sq[.x], 2 * log_mean_diff)
+    # ) %>%
+    #   unlist() %>%
+    #   logspace_sum_vec()
+    # log_sigma_hat_sq <- log_sigma_hat_sq - log(n)
+    #
     # sigma_hat_sq <- mean((difference - mean(difference))^2)
     # Z_I_N <- sqrt(n) * mean(difference) / sqrt(sigma_hat_sq)
-    Z_I_N <- exp(log_mean_diff + (0.5 * log(n)) - (0.5 * log_sigma_hat_sq))
+    # Z_I_N <- exp(log_mean_diff + (0.5 * log(n)) - (0.5 * log_sigma_hat_sq))
+    Z_I_N <- sqrt(n) * (mean(exp(log_difference)) / sqrt(sigma_hat_sq))
     if (!is.na(Z_I_N) & (abs(Z_I_N) <= zalpha)) {
-      test_rejection <- TRUE
+      test_rejection <- FALSE
     }
     log_p_old <- log_p_new
   }
