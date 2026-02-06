@@ -86,7 +86,7 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
     if (!is.na(Z_I_N) & (abs(Z_I_N) <= zalpha)) {
       test_rejection <- FALSE
     }
-    log_p_old <- log_p_new
+    p_old <- p_new
   }
 
   new_hdmde(
