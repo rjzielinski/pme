@@ -329,7 +329,7 @@ initialize_pme <- function(
   algorithm = "isomap",
   subsample_size = 5
 ) {
-  est <- hdmde_mod(x, min_clusters, alpha, max_clusters)
+  est <- hdmde(x, min_clusters, alpha, max_clusters)
   if (component_type == "subsample") {
     cluster_points <- matrix(nrow = 1, ncol = ncol(x))
     point_weights <- vector()
@@ -642,4 +642,139 @@ calc_msd <- function(x, km, f, t, D, d) {
     mean()
 
   mse
+}
+
+
+#' Create PME Initialization
+#'
+#' @param x A numeric matrix of data.
+#' @param d The intrinsic dimension.
+#' @param min_clusters The minimum number of mixture components.
+#' @param alpha Significance level.
+#' @param max_clusters Maximum number of components.
+#'
+#' @return A list used to initialize PME.
+#'
+#' @noRd
+initialize_pme <- function(
+  x,
+  d,
+  min_clusters,
+  alpha,
+  max_clusters,
+  component_type = "centers",
+  algorithm = "isomap",
+  subsample_size = 5
+) {
+  est <- hdmde(x, min_clusters, alpha, max_clusters)
+  if (component_type == "subsample") {
+    cluster_points <- matrix(nrow = 1, ncol = ncol(x))
+    point_weights <- vector()
+    for (cluster in 1:nrow(est$mu)) {
+      temp_x <- x[est$km$cluster == cluster, ] %>%
+        matrix(ncol = ncol(x))
+      # cluster_distances <- map(
+      #   1:nrow(temp_x),
+      #   ~ dist_euclidean(est$mu[cluster, ], temp_x[.x, ])
+      # ) %>%
+      #   reduce(c)
+      cluster_sample <- sample(
+        1:nrow(temp_x),
+        size = subsample_size,
+        replace = TRUE
+      )
+      points <- unique(cluster_sample)
+      n_occurences <- table(cluster_sample)
+
+      cluster_points <- rbind(
+        cluster_points,
+        temp_x[points, ]
+      )
+      point_weights <- c(
+        point_weights,
+        est$theta_hat[cluster] * n_occurences
+      )
+    }
+    cluster_points <- cluster_points[-1, ]
+    est_order <- order(cluster_points[, 1])
+    centers <- cluster_points[est_order, ]
+    W <- diag(point_weights)
+    theta_hat <- point_weights
+  } else {
+    est_order <- order(est$mu[, 1])
+    theta_hat <- est$theta_hat[est_order]
+    centers <- est$mu[est_order, ]
+    W <- diag(theta_hat)
+  }
+  sigma <- est$sigma
+  X <- centers
+  I <- nrow(centers)
+
+  # if (algorithm == "diffusion_maps") {
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "DiffusionMaps",
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
+  # } else if (algorithm == "hessian_eigenmaps") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "HLLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
+  # } else if (algorithm == "laplacian_eigenmaps") {
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "LaplacianEigenmaps",
+  #   knn = floor(sqrt(nrow(X))),
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
+  # } else if (algorithm == "lle") {
+  #   init_parameterization <- dimRed::embed(
+  #     X,
+  #     "LLE",
+  #     knn = floor(sqrt(nrow(X))),
+  #     ndim = d
+  #     # .mute = c("message", "output")
+  #   )
+  # } else {
+  # init_parameterization <- dimRed::embed(
+  #   X,
+  #   "Isomap",
+  #   knn = floor(sqrt(nrow(X))),
+  #   ndim = d,
+  #   .mute = c("message", "output")
+  # )
+  #   dissimilarity <- as.matrix(stats::dist(X))
+  #   init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
+  # }
+
+  dissimilarity <- as.matrix(stats::dist(X))
+  init_parameterization <- vegan::isomap(
+    dissimilarity,
+    ndim = d,
+    k = min(
+      floor(nrow(dissimilarity) / 2),
+      2 * ceiling(sqrt(nrow(dissimilarity)))
+    ),
+    fragmentedOK = TRUE
+  )
+
+  # output <- dimRed::as.data.frame(init_parameterization) %>%
+  #   as.matrix()
+
+  output <- init_parameterization$points |>
+    as.matrix()
+
+  list(
+    parameterization = matrix(output[, 1:d], nrow = nrow(X)),
+    theta_hat = theta_hat,
+    centers = centers,
+    sigma = sigma,
+    km = est$km
+  )
 }
