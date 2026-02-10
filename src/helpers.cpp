@@ -356,6 +356,8 @@ arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma:
   arma::mat zero_mat2 = arma::zeros(d + 1, D);
   b = join_cols(b, zero_mat2);
   // arma::mat sol = arma::pinv(M) * b;
+  double jitter = 1e-8;
+  M.diag() += jitter;
   arma::mat sol = arma::solve(M, b);
   return sol;
 }
