@@ -1,6 +1,7 @@
 #include <RcppArmadillo.h>
 #include <boost/math/distributions/normal.hpp>
 
+// [[Rcpp::plugins(openmp)]]
 // [[Rcpp::depends(RcppArmadillo)]]
 // [[Rcpp::depends(BH)]]
 
@@ -354,7 +355,8 @@ arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma:
   arma::mat b = join_cols(2 * E * W * X, 2 * t_val.t() * W * X);
   arma::mat zero_mat2 = arma::zeros(d + 1, D);
   b = join_cols(b, zero_mat2);
-  arma::mat sol = arma::pinv(M) * b;
+  // arma::mat sol = arma::pinv(M) * b;
+  arma::mat sol = arma::solve(M, b);
   return sol;
 }
 
