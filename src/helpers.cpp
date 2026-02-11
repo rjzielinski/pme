@@ -342,7 +342,7 @@ arma::vec calc_weights_cpp(arma::mat x_obs, arma::mat mu, double sigma, double e
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D) {
+arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D, double jitter = 1e-10) {
   arma::mat M1 = join_rows(2 * E * W * E + (2 * w * E), 2 * E * W * t_val);
   M1 = join_rows(M1, t_val);
   arma::mat M2 = join_rows(2 * t_val.t() * W * E, 2 * t_val.t() * W * t_val);
@@ -356,7 +356,8 @@ arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma:
   arma::mat zero_mat2 = arma::zeros(d + 1, D);
   b = join_cols(b, zero_mat2);
   // arma::mat sol = arma::pinv(M) * b;
-  double jitter = 1e-8;
+  // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
+  // M is often singular, so approximate the solution by adding small jitter
   M.diag() += jitter;
   arma::mat sol = arma::solve(M, b);
   return sol;
