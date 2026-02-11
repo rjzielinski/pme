@@ -171,12 +171,12 @@ calc_weights <- function(x_obs, mu, sigma, epsilon = 0.001, max_iter = 1000) {
       p = lambda_hat_old,
       x = x_obs,
       mu = mu,
-      w = exp(w),
+      w = w,
       iterlim = 10000
     )$estimate
     theta_new <- w / Rfast::rowsums(t(t(cbind(rep(1, N), mu)) * lambda_hat))
 
-    abs_diff <- dist_euclidean(theta_new, theta_old)
+    abs_diff <- max(abs(theta_new - theta_old))
     if (is.na(abs_diff) | sum(bound_theta(theta_new) == 0)) {
       return(bound_theta(theta_old))
     } else {
