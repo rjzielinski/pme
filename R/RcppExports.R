@@ -187,7 +187,7 @@ calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
 #'
 #' @return A numeric matrix.
 #' @export
-solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
-    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
+solve_weighted_spline <- function(E, W, t_val, X, w, d, D, jitter = 1e-8) {
+    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D, jitter)
 }
 

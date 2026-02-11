@@ -173,8 +173,8 @@ BEGIN_RCPP
 END_RCPP
 }
 // solve_weighted_spline
-arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D);
-RcppExport SEXP _pme_solve_weighted_spline(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D, double jitter);
+RcppExport SEXP _pme_solve_weighted_spline(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP, SEXP jitterSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
@@ -185,7 +185,8 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< double >::type w(wSEXP);
     Rcpp::traits::input_parameter< int >::type d(dSEXP);
     Rcpp::traits::input_parameter< int >::type D(DSEXP);
-    rcpp_result_gen = Rcpp::wrap(solve_weighted_spline(E, W, t_val, X, w, d, D));
+    Rcpp::traits::input_parameter< double >::type jitter(jitterSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_weighted_spline(E, W, t_val, X, w, d, D, jitter));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -204,7 +205,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pme_calc_init_param", (DL_FUNC) &_pme_calc_init_param, 3},
     {"_pme_calc_A", (DL_FUNC) &_pme_calc_A, 3},
     {"_pme_calc_weights_cpp", (DL_FUNC) &_pme_calc_weights_cpp, 5},
-    {"_pme_solve_weighted_spline", (DL_FUNC) &_pme_solve_weighted_spline, 7},
+    {"_pme_solve_weighted_spline", (DL_FUNC) &_pme_solve_weighted_spline, 8},
     {NULL, NULL, 0}
 };
 

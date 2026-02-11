@@ -20,7 +20,8 @@ lpme(
   verbose = TRUE,
   print_plots = TRUE,
   increase_threshold = 1.05,
-  init = "full"
+  init = "full",
+  init_neighbors = NA
 )
 }
 \arguments{
