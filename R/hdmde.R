@@ -134,18 +134,7 @@ compute_estimates <- function(x, n) {
 #'
 #' @noRd
 estimate_sigma <- function(x, km) {
-  clusters <- unique(km$cluster)
-  sigma_vec <- rep(NA, length(clusters))
-  for (j in seq_along(clusters)) {
-    index_temp <- which(km$cluster == clusters[j])
-    x_temp <- matrix(x[index_temp, ], nrow = length(index_temp))
-    s <- purrr::map(
-      seq_len(nrow(x_temp)),
-      ~ dist_euclidean(x_temp[.x, ], km$centers[clusters[j], ])^2
-    ) %>%
-      unlist()
-    sigma_vec[j] <- mean(s)
-  }
+  sigma_vec <- km$withinss / km$size
   sqrt(mean(sigma_vec) / ncol(km$centers))
 }
 
