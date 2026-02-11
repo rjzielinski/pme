@@ -4,7 +4,7 @@
 \alias{solve_weighted_spline}
 \title{Find the Coefficients of a Weighted Spline Function}
 \usage{
-solve_weighted_spline(E, W, t_val, X, w, d, D, jitter = 1e-08)
+solve_weighted_spline(E, W, t_val, X, w, d, D)
 }
 \arguments{
 \item{E}{A numeric matrix.}
