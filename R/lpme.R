@@ -612,7 +612,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
       1:num_clusters[idx],
     ]
     polynomial_coefs[[idx]] <- pme_results[[idx]]$coefs[[opt_run]][
-      (num_clusters[idx] + 1):(num_clusters[idx] + d + 2),
+      (num_clusters[idx] + 1):(num_clusters[idx] + d + 1),
     ] %>%
       t() %>%
       matrix(nrow = 1)
