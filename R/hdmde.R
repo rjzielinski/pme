@@ -51,32 +51,17 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 
   component_estimates <- compute_estimates(x_obs, N)
 
-  p_old <- purrr::map(
-    1:n,
-    ~ f_test(
-      x_obs[.x, ],
-      component_estimates$mu,
-      component_estimates$sigma,
-      component_estimates$theta_hat
-    )
-  ) %>%
-    unlist()
+  p_old <- (component_estimates$A %*% component_estimates$theta_hat) |>
+    as.vector()
 
   test_rejection <- TRUE
 
   while ((test_rejection == TRUE) & (N < min(n - 1, max_comp))) {
     N <- N + 1
     components_new <- compute_estimates(x_obs, N)
-    p_new <- purrr::map(
-      1:n,
-      ~ f_test(
-        x_obs[.x, ],
-        components_new$mu,
-        components_new$sigma,
-        components_new$theta_hat
-      )
-    ) %>%
-      unlist()
+
+    p_new <- (components_new$A %*% components_new$theta_hat) |>
+      as.vector()
 
     difference <- p_new - p_old
     mean_diff <- mean(difference)
@@ -116,12 +101,14 @@ compute_estimates <- function(x, n) {
   mu <- km$centers
   sigma_est <- estimate_sigma(x, km)
   theta_hat <- calc_weights(x, mu, sigma_est)
+  A <- exp(calc_A(x, mu, sigma_est))
 
   list(
     mu = mu,
     sigma = sigma_est,
     theta_hat = theta_hat,
-    km = km
+    km = km,
+    A = A
   )
 }
 
@@ -203,6 +190,7 @@ f_test <- function(x, mu, sigma, theta_hat) {
     ~ smoothing_kernel(x, mu[.x, ], sigma)
   ) %>%
     unlist()
+
   sum(theta_hat * comp_vec)
 }
 
