@@ -97,7 +97,13 @@ hdmde <- function(x_obs, N0, alpha, max_comp) {
 compute_estimates <- function(x, n) {
   # increasing iter.max helps to avoid poor fit in high dimensional situations.
   # km <- stats::kmeans(x, n, iter.max = 10000, nstart = 100, algorithm = "Lloyd")
-  km <- stats::kmeans(x, n, iter.max = 10000, nstart = 1000)
+  km <- stats::kmeans(
+    x,
+    n,
+    iter.max = 100,
+    nstart = 1000,
+    algorithm = "MacQueen"
+  )
   mu <- km$centers
   sigma_est <- estimate_sigma(x, km)
   theta_hat <- calc_weights(x, mu, sigma_est)
