@@ -419,7 +419,7 @@ arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma:
   // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
   // M is often singular, so approximate the solution by adding small jitter
   // M.diag() += jitter;
-  arma::mat sol = arma::solve(sol, M, b);
+  arma::mat sol = arma::solve(M, b);
   
   return sol;
 }
