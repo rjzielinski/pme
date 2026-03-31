@@ -396,10 +396,10 @@ arma::mat solve_weighted_spline_pinv(arma::mat E, arma::mat W, arma::mat t_val, 
 
 //' Find the Coefficients of a Weighted Spline Function
 //'
-//' @param E A numeric matrix.
-//' @param W A numeric matrix.
-//' @param t_val A numeric matrix.
-//' @param X A numeric matrix.
+//' @param E A numeric matrix (n x n).
+//' @param W A numeric matrix (n x n).
+//' @param t_val A numeric matrix (d + 1 x d + 1).
+//' @param X A numeric matrix (n x D).
 //' @param w The smoothing parameter.
 //' @param d The intrinsic dimension.
 //' @param D The dimension of the higher dimensional space.

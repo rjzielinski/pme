@@ -177,6 +177,22 @@ calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
 
 #' Find the Coefficients of a Weighted Spline Function
 #'
+#' @param E A numeric matrix (n x n).
+#' @param W A numeric matrix (n x n).
+#' @param t_val A numeric matrix (d + 1 x d + 1).
+#' @param X A numeric matrix (n x D).
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension.
+#' @param D The dimension of the higher dimensional space.
+#'
+#' @return A numeric matrix.
+#' @export
+solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function
+#'
 #' @param E A numeric matrix.
 #' @param W A numeric matrix.
 #' @param t_val A numeric matrix.
@@ -187,7 +203,7 @@ calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
 #'
 #' @return A numeric matrix.
 #' @export
-solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
-    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
+solve_weighted_spline2 <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline2`, E, W, t_val, X, w, d, D)
 }
 
