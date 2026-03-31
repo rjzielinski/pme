@@ -173,15 +173,15 @@ BEGIN_RCPP
 END_RCPP
 }
 // solve_weighted_spline
-arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D);
+arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
 RcppExport SEXP _pme_solve_weighted_spline(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type E(ESEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type W(WSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type t_val(t_valSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
     Rcpp::traits::input_parameter< double >::type w(wSEXP);
     Rcpp::traits::input_parameter< int >::type d(dSEXP);
     Rcpp::traits::input_parameter< int >::type D(DSEXP);
