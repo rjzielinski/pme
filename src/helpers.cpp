@@ -407,7 +407,7 @@ arma::mat solve_weighted_spline_pinv(arma::mat E, arma::mat W, arma::mat t_val, 
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+arma::mat solve_weighted_spline_fullM(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
 
   int n = E.n_rows;
   int mat_size = n + d + 1;
@@ -441,7 +441,7 @@ arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const ar
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-arma::mat solve_weighted_spline2(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
 
   arma::mat A = E;
   A.diag() += w / W.diag();

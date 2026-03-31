@@ -187,8 +187,8 @@ calc_weights_cpp <- function(x_obs, mu, sigma, epsilon, max_iter) {
 #'
 #' @return A numeric matrix.
 #' @export
-solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
-    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
+solve_weighted_spline_fullM <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline_fullM`, E, W, t_val, X, w, d, D)
 }
 
 #' Find the Coefficients of a Weighted Spline Function
@@ -203,7 +203,7 @@ solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
 #'
 #' @return A numeric matrix.
 #' @export
-solve_weighted_spline2 <- function(E, W, t_val, X, w, d, D) {
-    .Call(`_pme_solve_weighted_spline2`, E, W, t_val, X, w, d, D)
+solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
 }
 
