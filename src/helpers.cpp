@@ -408,45 +408,26 @@ arma::mat solve_weighted_spline_pinv(arma::mat E, arma::mat W, arma::mat t_val, 
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-arma::mat solve_weighted_spline(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D) {
-  arma::mat M1 = E;
-  M1.diag() += w / W.diag();
-  M1 = join_rows(M1, t_val);
-  arma::mat M2 = join_rows(t_val.t(), arma::zeros(d + 1, d + 1));
-  arma::mat M = join_cols(M1, M2);
-  arma::mat b = join_cols(X, arma::zeros(d + 1, D));
-  // arma::mat sol = arma::pinv(M) * b;
-  // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
-  // M is often singular, so approximate the solution by adding small jitter
-  // M.diag() += jitter;
-  arma::mat sol = arma::solve(M, b);
-  
-  return sol;
+arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+
+  arma::mat A = E;
+  A.diag() += w / W.diag();
+
+  arma::mat T_X = arma::join_rows(t_val, X);
+
+  // Solve for A_inv * T and A_inv * X
+  arma::mat A_invT_X = arma::solve(A, T_X, arma::solve_opts::likely_sympd);
+  arma::mat A_invT = A_invT_X.head_cols(d + 1);
+  arma::mat A_invX = A_invT_X.tail_cols(D);
+
+  // Schur complement system
+  arma::mat C2 = t_val.t() * A_invT;
+  arma::mat R = t_val.t() * A_invX;
+
+  arma::mat s = arma::solve(C2, R);
+  arma::mat alpha = A_invX - A_invT * s;
+
+  return arma::join_cols(alpha, s);
 }
 
-//' Find the Coefficients of a Weighted Spline Function
-//'
-//' @param E A numeric matrix.
-//' @param W A numeric matrix.
-//' @param t_val A numeric matrix.
-//' @param X A numeric matrix.
-//' @param w The smoothing parameter.
-//' @param d The intrinsic dimension.
-//' @param D The dimension of the higher dimensional space.
-//'
-//' @return A numeric matrix.
-arma::mat solve_weighted_spline_reinsch_pinv(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D, double jitter = 1e-8) {
-  arma::mat M1 = E;
-  M1.diag() += w / W.diag();
-  M1 = join_rows(M1, t_val);
-  arma::mat M2 = join_rows(t_val.t(), arma::zeros(d + 1, d + 1));
-  arma::mat M = join_cols(M1, M2);
-  arma::mat b = join_cols(X, arma::zeros(d + 1, D));
-  arma::mat sol = arma::pinv(M) * b;
-  // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
-  // M is often singular, so approximate the solution by adding small jitter
-  // M.diag() += jitter;
-  // arma::mat sol = arma::solve(M, b);
-  return sol;
-}
 
