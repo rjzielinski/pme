@@ -161,8 +161,6 @@ double eta_kernel(arma::vec t, int lambda) {
   return y;
 }
 
-
-
 //' Documentation Still Needed
 //'
 //' This is a function that still needs to be documented properly.
@@ -185,6 +183,7 @@ arma::mat calcE(arma::mat x, int lambda) {
   }
   return E;
 }
+
 
 //' Documentation Still Needed
 //'
@@ -409,6 +408,40 @@ arma::mat solve_weighted_spline_pinv(arma::mat E, arma::mat W, arma::mat t_val, 
 //' @export
 // [[Rcpp::export]]
 arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+
+  int n = E.n_rows;
+  int mat_size = n + d + 1;
+
+  arma::mat M(mat_size, mat_size, arma::fill::zeros);
+  arma::mat b(mat_size, D, arma::fill::zeros);
+
+  M.submat(0, 0, n - 1, n - 1) = E;
+  M.submat(0, 0, n - 1, n - 1).diag() += w / W.diag();
+
+  M.submat(0, n, n - 1, mat_size - 1) = t_val;
+  M.submat(n, 0, mat_size - 1, n - 1) = t_val.t();
+
+  b.submat(0, 0, n - 1, D - 1) = X;
+
+  arma::mat sol = arma::solve(M, b, arma::solve_opts::likely_sympd);
+  
+  return sol;
+}
+
+//' Find the Coefficients of a Weighted Spline Function
+//'
+//' @param E A numeric matrix.
+//' @param W A numeric matrix.
+//' @param t_val A numeric matrix.
+//' @param X A numeric matrix.
+//' @param w The smoothing parameter.
+//' @param d The intrinsic dimension.
+//' @param D The dimension of the higher dimensional space.
+//'
+//' @return A numeric matrix.
+//' @export
+// [[Rcpp::export]]
+arma::mat solve_weighted_spline2(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
 
   arma::mat A = E;
   A.diag() += w / W.diag();
