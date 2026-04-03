@@ -145,7 +145,30 @@ double log_smoothing_kernel(arma::vec x, arma::vec mu, double sigma) {
 //'
 //' @return A numeric value.
 // [[Rcpp::export]]
-double eta_kernel(arma::vec t, int lambda) {
+double eta_kernel(const arma::vec& t, int lambda) {
+  double norm_val = norm_euclidean(t);
+
+  if (lambda % 2 == 0) {
+    if (norm_val == 0.0) {
+      return 0.0;
+    } 
+
+    return std::pow(norm_val, lambda) * std::log(norm_val);
+  } 
+
+  return std::pow(norm_val, lambda);
+}
+
+//' Documentation Still Needed
+//'
+//' This is a function that still needs to be documented properly.
+//'
+//' @param t Numeric vector of values.
+//' @param lambda Number of dimensions.
+//'
+//' @return A numeric value.
+// [[Rcpp::export]]
+double eta_kernel_old(arma::vec t, int lambda) {
   double lambda_num = lambda / 1.0;
   double norm_val = norm_euclidean(t);
   double y;
