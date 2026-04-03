@@ -161,6 +161,7 @@ double eta_kernel(arma::vec t, int lambda) {
   return y;
 }
 
+
 //' Documentation Still Needed
 //'
 //' This is a function that still needs to be documented properly.
@@ -172,13 +173,23 @@ double eta_kernel(arma::vec t, int lambda) {
 //' @export
 //'
 // [[Rcpp::export]]
-arma::mat calcE(arma::mat x, int lambda) {
+arma::mat calcE(const arma::mat& x, int lambda) {
   int nrow = x.n_rows;
-  arma::mat E(nrow, nrow);
+  arma::mat E(nrow, nrow, arma::fill::none);
 
-  for (int i = 0; i < nrow; i++) {
-    for (int j = 0; j < nrow; j++) {
-      E(i, j) = eta_kernel(x.row(i).t() - x.row(j).t(), lambda);
+  // armadillo uses column-major memory
+  arma::mat x_t = x.t();
+
+  for (int i = 0; i < nrow; ++i) {
+
+    E(i, i) = eta_kernel(x_t.col(i) - x_t.col(i), lambda);
+
+    // E matrix is symmetric, so only calculate off-diagonal elements once
+    for (int j = i + 1; j < nrow; ++j) {
+      double kernel_val = eta_kernel(x_t.col(i) - x_t.col(j), lambda);
+
+      E(i, j) = kernel_val;
+      E(j, i) = kernel_val;
     }
   }
   return E;
@@ -441,7 +452,7 @@ arma::mat solve_weighted_spline_fullM(const arma::mat& E, const arma::mat& W, co
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+arma::mat solve_weighted_spline_schur(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
 
   arma::mat A = E;
   A.diag() += w / W.diag();
@@ -457,10 +468,154 @@ arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const ar
   arma::mat C2 = t_val.t() * A_invT;
   arma::mat R = t_val.t() * A_invX;
 
-  arma::mat s = arma::solve(C2, R);
-  arma::mat alpha = A_invX - A_invT * s;
+  arma::mat alpha = arma::solve(C2, R);
+  arma::mat s = A_invX - A_invT * alpha;
 
-  return arma::join_cols(alpha, s);
+  return arma::join_cols(s, alpha);
+}
+
+//' Find the Coefficients of a Weighted Spline Function
+//'
+//' @param E A numeric matrix.
+//' @param W A numeric matrix.
+//' @param t_val A numeric matrix.
+//' @param X A numeric matrix.
+//' @param w The smoothing parameter.
+//' @param d The intrinsic dimension. (Note: Unused in function body)
+//' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+//'
+//' @return A numeric matrix.
+//' @export
+// [[Rcpp::export]]
+Rcpp::List solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+
+  int n = E.n_rows;
+
+  // Construct M
+  arma::vec weight_vec = w / W.diag();
+  arma::mat M = E;
+  M.diag() += weight_vec;
+
+  arma::mat M_inv = arma::inv(M);
+
+  // Split M_inv_t_X into M_inv_t, M_inv_X, M_inv
+  arma::mat M_inv_t = M_inv * t_val;
+  arma::mat M_inv_X = M_inv * X;
+  arma::mat TMT = t_val.t() * M_inv_t;
+
+  // Solve for alpha
+  arma::mat alpha = arma::solve(TMT, t_val.t() * M_inv_X);
+
+  // Solve for s
+  arma::mat s = M_inv_X - M_inv_t * alpha;
+
+  // Compute hat matrix
+  arma::mat hat_inner = M_inv - M_inv_t * arma::solve(TMT, M_inv_t.t());
+  hat_inner.each_col() %= weight_vec;
+  arma::mat hat = arma::eye(n, n) - hat_inner;
+
+  return Rcpp::List::create(Rcpp::Named("s") = s,
+      Rcpp::Named("alpha") = alpha,
+      Rcpp::Named("hat") = hat);
 }
 
 
+//' Find the Coefficients of a Weighted Spline Function
+//'
+//' @param E A numeric matrix.
+//' @param W A numeric matrix.
+//' @param t_val A numeric matrix.
+//' @param X A numeric matrix.
+//' @param w The smoothing parameter.
+//' @param d The intrinsic dimension. (Note: Unused in function body)
+//' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+//'
+//' @return A numeric matrix.
+//' @export
+// [[Rcpp::export]]
+Rcpp::List solve_spline_cpp(const arma::mat& E, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+
+  int n = E.n_rows;
+
+  // Construct M
+  arma::vec tuning_vec = w * arma::ones(n);
+  arma::mat M = E;
+  M.diag() += tuning_vec;
+
+  arma::mat M_inv = arma::inv(M);
+
+  // Split M_inv_t_X into M_inv_t, M_inv_X, M_inv
+  arma::mat M_inv_t = M_inv * t_val;
+  arma::mat M_inv_X = M_inv * X;
+  arma::mat TMT = t_val.t() * M_inv_t;
+
+  // Solve for alpha
+  arma::mat alpha = arma::solve(TMT, t_val.t() * M_inv_X);
+
+  // Solve for s
+  arma::mat s = M_inv_X - M_inv_t * alpha;
+
+  // Compute hat matrix
+  arma::mat hat_inner = M_inv - M_inv_t * arma::solve(TMT, M_inv_t.t());
+  hat_inner.each_col() %= tuning_vec;
+  arma::mat hat = arma::eye(n, n) - hat_inner;
+
+  return Rcpp::List::create(Rcpp::Named("s") = s,
+      Rcpp::Named("alpha") = alpha,
+      Rcpp::Named("hat") = hat);
+}
+
+//' Find the Coefficients of a Weighted Spline Function using QR
+//'
+//' @param E A numeric matrix.
+//' @param W A numeric matrix.
+//' @param t_val A numeric matrix.
+//' @param X A numeric matrix.
+//' @param w The smoothing parameter.
+//' @param d The intrinsic dimension. (Note: Unused in function body)
+//' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+//'
+//' @return A numeric matrix.
+//' @export
+// [[Rcpp::export]]
+Rcpp::List solve_weighted_spline_qr(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+
+  int n = t_val.n_rows;
+  int p = t_val.n_cols;
+
+  // Construct M
+  arma::vec weight_vec = w / W.diag();
+  arma::mat M = E;
+  M.diag() += weight_vec;
+
+    // Full QR decomposition
+  arma::mat Q;
+  arma::mat R;
+  arma::qr(Q, R, t_val);
+
+  arma::mat R1 = R.head_rows(p);
+  arma::mat Q1 = Q.head_cols(p);
+  arma::mat Q2 = Q.tail_cols(n - p);
+
+  // precompute repeated matrices
+  arma::mat M_Q2 = M * Q2;
+  arma::mat Q2_M_Q2 = Q2.t() * M_Q2;
+
+  // solve for s
+  arma::mat Q2_X = Q2.t() * X;
+  arma::mat QMQ_inv_Q = arma::solve(Q2_M_Q2, Q2.t());
+  arma::mat s = Q2 * QMQ_inv_Q * X;
+
+  // solve for alpha
+  arma::mat alpha_rhs = Q1.t() * (X - (M_Q2 * QMQ_inv_Q * X));
+  arma::mat alpha = arma::solve(arma::trimatu(R1), alpha_rhs);
+
+  arma::mat hat_right = Q2 * QMQ_inv_Q;
+  hat_right.each_col() %= weight_vec;
+  arma::mat hat = arma::eye(n, n) - hat_right;
+
+return Rcpp::List::create(Rcpp::Named("s") = s,
+      Rcpp::Named("alpha") = alpha,
+      Rcpp::Named("hat") = hat);
+
+}
