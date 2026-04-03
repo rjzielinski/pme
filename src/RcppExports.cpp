@@ -83,37 +83,49 @@ BEGIN_RCPP
 END_RCPP
 }
 // eta_kernel
-double eta_kernel(arma::vec t, int lambda);
+double eta_kernel(const arma::vec& t, int lambda);
 RcppExport SEXP _pme_eta_kernel(SEXP tSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type t(tSEXP);
     Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(eta_kernel(t, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
+// eta_kernel_old
+double eta_kernel_old(arma::vec t, int lambda);
+RcppExport SEXP _pme_eta_kernel_old(SEXP tSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type t(tSEXP);
+    Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(eta_kernel_old(t, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
 // calcE
-arma::mat calcE(arma::mat x, int lambda);
+arma::mat calcE(const arma::mat& x, int lambda);
 RcppExport SEXP _pme_calcE(SEXP xSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::mat >::type x(xSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type x(xSEXP);
     Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(calcE(x, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
 // etaFunc
-arma::mat etaFunc(arma::vec t, arma::mat tau, int lambda);
+arma::vec etaFunc(const arma::vec& t, const arma::mat& tau, int lambda);
 RcppExport SEXP _pme_etaFunc(SEXP tSEXP, SEXP tauSEXP, SEXP lambdaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type t(tSEXP);
-    Rcpp::traits::input_parameter< arma::mat >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< const arma::vec& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type tau(tauSEXP);
     Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(etaFunc(t, tau, lambda));
     return rcpp_result_gen;
@@ -189,6 +201,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// solve_weighted_spline_schur
+arma::mat solve_weighted_spline_schur(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
+RcppExport SEXP _pme_solve_weighted_spline_schur(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< int >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_weighted_spline_schur(E, W, t_val, X, w, d, D));
+    return rcpp_result_gen;
+END_RCPP
+}
 // solve_weighted_spline
 arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
 RcppExport SEXP _pme_solve_weighted_spline(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
@@ -206,6 +235,72 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// solve_weighted_spline_hat
+Rcpp::List solve_weighted_spline_hat(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
+RcppExport SEXP _pme_solve_weighted_spline_hat(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< int >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_weighted_spline_hat(E, W, t_val, X, w, d, D));
+    return rcpp_result_gen;
+END_RCPP
+}
+// solve_spline
+arma::mat solve_spline(const arma::mat& E, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
+RcppExport SEXP _pme_solve_spline(SEXP ESEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< int >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_spline(E, t_val, X, w, d, D));
+    return rcpp_result_gen;
+END_RCPP
+}
+// solve_spline_hat
+Rcpp::List solve_spline_hat(const arma::mat& E, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
+RcppExport SEXP _pme_solve_spline_hat(SEXP ESEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< int >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_spline_hat(E, t_val, X, w, d, D));
+    return rcpp_result_gen;
+END_RCPP
+}
+// solve_weighted_spline_qr
+Rcpp::List solve_weighted_spline_qr(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D);
+RcppExport SEXP _pme_solve_weighted_spline_qr(SEXP ESEXP, SEXP WSEXP, SEXP t_valSEXP, SEXP XSEXP, SEXP wSEXP, SEXP dSEXP, SEXP DSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type E(ESEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type W(WSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type t_val(t_valSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< double >::type w(wSEXP);
+    Rcpp::traits::input_parameter< int >::type d(dSEXP);
+    Rcpp::traits::input_parameter< int >::type D(DSEXP);
+    rcpp_result_gen = Rcpp::wrap(solve_weighted_spline_qr(E, W, t_val, X, w, d, D));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_pme_norm_euclidean", (DL_FUNC) &_pme_norm_euclidean, 1},
@@ -215,6 +310,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pme_logspace_sum_vec", (DL_FUNC) &_pme_logspace_sum_vec, 1},
     {"_pme_log_smoothing_kernel", (DL_FUNC) &_pme_log_smoothing_kernel, 3},
     {"_pme_eta_kernel", (DL_FUNC) &_pme_eta_kernel, 2},
+    {"_pme_eta_kernel_old", (DL_FUNC) &_pme_eta_kernel_old, 2},
     {"_pme_calcE", (DL_FUNC) &_pme_calcE, 2},
     {"_pme_etaFunc", (DL_FUNC) &_pme_etaFunc, 3},
     {"_pme_calc_nearest_x", (DL_FUNC) &_pme_calc_nearest_x, 2},
@@ -222,7 +318,12 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pme_calc_A", (DL_FUNC) &_pme_calc_A, 3},
     {"_pme_calc_weights_cpp", (DL_FUNC) &_pme_calc_weights_cpp, 5},
     {"_pme_solve_weighted_spline_fullM", (DL_FUNC) &_pme_solve_weighted_spline_fullM, 7},
+    {"_pme_solve_weighted_spline_schur", (DL_FUNC) &_pme_solve_weighted_spline_schur, 7},
     {"_pme_solve_weighted_spline", (DL_FUNC) &_pme_solve_weighted_spline, 7},
+    {"_pme_solve_weighted_spline_hat", (DL_FUNC) &_pme_solve_weighted_spline_hat, 7},
+    {"_pme_solve_spline", (DL_FUNC) &_pme_solve_spline, 6},
+    {"_pme_solve_spline_hat", (DL_FUNC) &_pme_solve_spline_hat, 6},
+    {"_pme_solve_weighted_spline_qr", (DL_FUNC) &_pme_solve_weighted_spline_qr, 7},
     {NULL, NULL, 0}
 };
 

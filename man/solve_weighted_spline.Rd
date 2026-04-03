@@ -17,9 +17,9 @@ solve_weighted_spline(E, W, t_val, X, w, d, D)
 
 \item{w}{The smoothing parameter.}
 
-\item{d}{The intrinsic dimension.}
+\item{d}{The intrinsic dimension. (Note: Unused in function body)}
 
-\item{D}{The dimension of the higher dimensional space.}
+\item{D}{The dimension of the higher dimensional space. (Note: Unused in function body)}
 }
 \value{
 A numeric matrix.

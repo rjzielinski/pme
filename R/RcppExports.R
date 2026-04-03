@@ -99,6 +99,18 @@ eta_kernel <- function(t, lambda) {
 #'
 #' This is a function that still needs to be documented properly.
 #'
+#' @param t Numeric vector of values.
+#' @param lambda Number of dimensions.
+#'
+#' @return A numeric value.
+eta_kernel_old <- function(t, lambda) {
+    .Call(`_pme_eta_kernel_old`, t, lambda)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
 #' @param x Numeric matrix of values.
 #' @param lambda Number of dimensions.
 #'
@@ -203,7 +215,87 @@ solve_weighted_spline_fullM <- function(E, W, t_val, X, w, d, D) {
 #'
 #' @return A numeric matrix.
 #' @export
+solve_weighted_spline_schur <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline_schur`, E, W, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function
+#'
+#' @param E A numeric matrix.
+#' @param W A numeric matrix.
+#' @param t_val A numeric matrix.
+#' @param X A numeric matrix.
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension. (Note: Unused in function body)
+#' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+#'
+#' @return A numeric matrix.
+#' @export
 solve_weighted_spline <- function(E, W, t_val, X, w, d, D) {
     .Call(`_pme_solve_weighted_spline`, E, W, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function
+#'
+#' @param E A numeric matrix.
+#' @param W A numeric matrix.
+#' @param t_val A numeric matrix.
+#' @param X A numeric matrix.
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension. (Note: Unused in function body)
+#' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+#'
+#' @return A numeric matrix.
+#' @export
+solve_weighted_spline_hat <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline_hat`, E, W, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function
+#'
+#' @param E A numeric matrix.
+#' @param W A numeric matrix.
+#' @param t_val A numeric matrix.
+#' @param X A numeric matrix.
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension. (Note: Unused in function body)
+#' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+#'
+#' @return A numeric matrix.
+#' @export
+solve_spline <- function(E, t_val, X, w, d, D) {
+    .Call(`_pme_solve_spline`, E, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function
+#'
+#' @param E A numeric matrix.
+#' @param W A numeric matrix.
+#' @param t_val A numeric matrix.
+#' @param X A numeric matrix.
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension. (Note: Unused in function body)
+#' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+#'
+#' @return A numeric matrix.
+#' @export
+solve_spline_hat <- function(E, t_val, X, w, d, D) {
+    .Call(`_pme_solve_spline_hat`, E, t_val, X, w, d, D)
+}
+
+#' Find the Coefficients of a Weighted Spline Function using QR
+#'
+#' @param E A numeric matrix.
+#' @param W A numeric matrix.
+#' @param t_val A numeric matrix.
+#' @param X A numeric matrix.
+#' @param w The smoothing parameter.
+#' @param d The intrinsic dimension. (Note: Unused in function body)
+#' @param D The dimension of the higher dimensional space. (Note: Unused in function body)
+#'
+#' @return A numeric matrix.
+#' @export
+solve_weighted_spline_qr <- function(E, W, t_val, X, w, d, D) {
+    .Call(`_pme_solve_weighted_spline_qr`, E, W, t_val, X, w, d, D)
 }
 

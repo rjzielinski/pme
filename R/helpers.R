@@ -81,7 +81,7 @@ solve_weighted_spline_r <- function(E, W, t_val, X, w, d, D) {
 #'
 #' @return A numeric matrix of coefficients.
 #' @export
-solve_spline <- function(E, t_val, X, w, d, D) {
+solve_spline_R <- function(E, t_val, X, w, d, D) {
   M1 <- cbind(E + (w * diag(rep(1, nrow(t_val)))), t_val)
   M2 <- cbind(t(t_val), matrix(0, ncol = d + 1, nrow = d + 1))
   M <- rbind(M1, M2)
