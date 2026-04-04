@@ -86,6 +86,7 @@ is_lpme <- function(x) {
 #' @param print_plots A logical value indicating whether plots should be printed.
 #' @param increase_threshold A value.
 #' @param init Indicates which time points are used to initialize the function.
+#' @param init_neighbors Specified number of neighbors used in isomap initialization.
 #'
 #' @return An object of type "lpme".
 #' @export

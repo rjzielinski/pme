@@ -56,6 +56,8 @@ lpme(
 \item{increase_threshold}{A value.}
 
 \item{init}{Indicates which time points are used to initialize the function.}
+
+\item{init_neighbors}{Specified number of neighbors used in isomap initialization.}
 }
 \value{
 An object of type "lpme".

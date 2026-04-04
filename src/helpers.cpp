@@ -378,104 +378,6 @@ arma::vec calc_weights_cpp(arma::mat x_obs, arma::mat mu, double sigma, double e
 //' @param D The dimension of the higher dimensional space.
 //'
 //' @return A numeric matrix.
-arma::mat solve_weighted_spline_reg(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D, double jitter = 1e-8) {
-  arma::mat M1 = join_rows(2 * E * W * E + (2 * w * E), 2 * E * W * t_val);
-  M1 = join_rows(M1, t_val);
-  arma::mat M2 = join_rows(2 * t_val.t() * W * E, 2 * t_val.t() * W * t_val);
-  arma::mat zero_mat = arma::zeros(d + 1, d + 1);
-  M2 = join_rows(M2, zero_mat);
-  arma::mat M3 = join_rows(t_val.t(), zero_mat);
-  M3 = join_rows(M3, zero_mat);
-  arma::mat M = join_cols(M1, M2);
-  M = join_cols(M, M3);
-  arma::mat b = join_cols(2 * E * W * X, 2 * t_val.t() * W * X);
-  arma::mat zero_mat2 = arma::zeros(d + 1, D);
-  b = join_cols(b, zero_mat2);
-  // arma::mat sol = arma::pinv(M) * b;
-  // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
-  // M is often singular, so approximate the solution by adding small jitter
-  M.diag() += jitter;
-  arma::mat sol = arma::solve(M, b);
-  return sol;
-}
-
-//' Find the Coefficients of a Weighted Spline Function
-//'
-//' @param E A numeric matrix.
-//' @param W A numeric matrix.
-//' @param t_val A numeric matrix.
-//' @param X A numeric matrix.
-//' @param w The smoothing parameter.
-//' @param d The intrinsic dimension.
-//' @param D The dimension of the higher dimensional space.
-//'
-//' @return A numeric matrix.
-arma::mat solve_weighted_spline_pinv(arma::mat E, arma::mat W, arma::mat t_val, arma::mat X, double w, int d, int D, double jitter = 1e-8) {
-  arma::mat M1 = join_rows(2 * E * W * E + (2 * w * E), 2 * E * W * t_val);
-  M1 = join_rows(M1, t_val);
-  arma::mat M2 = join_rows(2 * t_val.t() * W * E, 2 * t_val.t() * W * t_val);
-  arma::mat zero_mat = arma::zeros(d + 1, d + 1);
-  M2 = join_rows(M2, zero_mat);
-  arma::mat M3 = join_rows(t_val.t(), zero_mat);
-  M3 = join_rows(M3, zero_mat);
-  arma::mat M = join_cols(M1, M2);
-  M = join_cols(M, M3);
-  arma::mat b = join_cols(2 * E * W * X, 2 * t_val.t() * W * X);
-  arma::mat zero_mat2 = arma::zeros(d + 1, D);
-  b = join_cols(b, zero_mat2);
-  arma::mat sol = arma::pinv(M) * b;
-  // for computational efficiency, use arma::solve() instead of Moore-Penrose pseudoinverse
-  // M is often singular, so approximate the solution by adding small jitter
-  // M.diag() += jitter;
-  // arma::mat sol = arma::solve(M, b);
-  return sol;
-}
-
-//' Find the Coefficients of a Weighted Spline Function
-//'
-//' @param E A numeric matrix (n x n).
-//' @param W A numeric matrix (n x n).
-//' @param t_val A numeric matrix (d + 1 x d + 1).
-//' @param X A numeric matrix (n x D).
-//' @param w The smoothing parameter.
-//' @param d The intrinsic dimension.
-//' @param D The dimension of the higher dimensional space.
-//'
-//' @return A numeric matrix.
-//' @export
-// [[Rcpp::export]]
-arma::mat solve_weighted_spline_fullM(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
-
-  int n = E.n_rows;
-  int mat_size = n + d + 1;
-
-  arma::mat M(mat_size, mat_size, arma::fill::zeros);
-  arma::mat b(mat_size, D, arma::fill::zeros);
-
-  M.submat(0, 0, n - 1, n - 1) = E;
-  M.submat(0, 0, n - 1, n - 1).diag() += w / W.diag();
-
-  M.submat(0, n, n - 1, mat_size - 1) = t_val;
-  M.submat(n, 0, mat_size - 1, n - 1) = t_val.t();
-
-  b.submat(0, 0, n - 1, D - 1) = X;
-
-  arma::mat sol = arma::solve(M, b, arma::solve_opts::likely_sympd);
-  
-  return sol;
-}
-
-//' Find the Coefficients of a Weighted Spline Function
-//'
-//' @param E A numeric matrix.
-//' @param W A numeric matrix.
-//' @param t_val A numeric matrix.
-//' @param X A numeric matrix.
-//' @param w The smoothing parameter.
-//' @param d The intrinsic dimension.
-//' @param D The dimension of the higher dimensional space.
-//'
-//' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
 arma::mat solve_weighted_spline_schur(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
@@ -590,10 +492,9 @@ Rcpp::List solve_weighted_spline_hat(const arma::mat& E, const arma::vec& W, con
 }
 
 
-//' Find the Coefficients of a Weighted Spline Function
+//' Find the Coefficients of a Spline Function
 //'
 //' @param E A numeric matrix.
-//' @param W A numeric matrix.
 //' @param t_val A numeric matrix.
 //' @param X A numeric matrix.
 //' @param w The smoothing parameter.
@@ -633,10 +534,9 @@ arma::mat solve_spline(const arma::mat& E, const arma::mat& t_val, const arma::m
 }
 
 
-//' Find the Coefficients of a Weighted Spline Function
+//' Find the Coefficients of a Spline Function
 //'
 //' @param E A numeric matrix.
-//' @param W A numeric matrix.
 //' @param t_val A numeric matrix.
 //' @param X A numeric matrix.
 //' @param w The smoothing parameter.
