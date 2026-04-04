@@ -556,12 +556,12 @@ arma::mat solve_weighted_spline(const arma::mat& E, const arma::mat& W, const ar
 //' @return A numeric matrix.
 //' @export
 // [[Rcpp::export]]
-Rcpp::List solve_weighted_spline_hat(const arma::mat& E, const arma::mat& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
+Rcpp::List solve_weighted_spline_hat(const arma::mat& E, const arma::vec& W, const arma::mat& t_val, const arma::mat& X, double w, int d, int D) {
 
   int n = E.n_rows;
 
   // Construct M
-  arma::vec weight_vec = w / W.diag();
+  arma::vec weight_vec = w / W;
   arma::mat M = E;
   M.diag() += weight_vec;
 
