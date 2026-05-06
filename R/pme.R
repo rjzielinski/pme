@@ -22,6 +22,7 @@
 pme <- function(
   data,
   d,
+  template = "euclidean",
   initialization = NULL,
   initialization_algorithm = "isomap",
   initialization_type = "centers",
@@ -48,27 +49,38 @@ pme <- function(
 
   # Initialization ----------------------------------------
   if (is.null(initialization)) {
-    if (initialization_type == "subsample") {
-      initialization <- initialize_pme(
-        data,
-        d,
-        min_clusters,
-        alpha,
-        max_clusters,
-        algorithm = initialization_algorithm,
-        component_type = "subsample"
-      )
-    } else {
-      initialization <- initialize_pme(
-        data,
-        d,
-        min_clusters,
-        alpha,
-        max_clusters,
-        algorithm = initialization_algorithm
-      )
-    }
+    initialization <- initialize_pme(
+      data,
+      d,
+      min_clusters,
+      alpha,
+      max_clusters,
+      algorithm = initialization_algorithm,
+      component_type = initialization_type,
+      template = template
+    )
+    # if (initialization_type == "subsample") {
+    #   initialization <- initialize_pme(
+    #     data,
+    #     d,
+    #     min_clusters,
+    #     alpha,
+    #     max_clusters,
+    #     algorithm = initialization_algorithm,
+    #     component_type = "subsample"
+    #   )
+    # } else {
+    #   initialization <- initialize_pme(
+    #     data,
+    #     d,
+    #     min_clusters,
+    #     alpha,
+    #     max_clusters,
+    #     algorithm = initialization_algorithm
+    #   )
+    # }
   }
+
   weights <- diag(initialization$theta_hat)
   X <- initialization$centers
   I <- length(initialization$theta_hat)
@@ -83,14 +95,20 @@ pme <- function(
       X,
       initialization$parameterization,
       weights,
-      lambda[tuning_idx]
+      lambda[tuning_idx],
+      template
     )
 
     params <- initialization$parameterization
 
     f_embedding <- function(parameters) {
+      if (template == "euclidean") {
+        kernel_vals <- etaFunc(parameters, params, 4 - d)
+      } else if (template == "sphere") {
+        kernel_vals <- assist::sphere(rbind(parameters, params))[1, -1]
+      }
       as.vector(
-        (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
+        (t(spline_coefs[1:I, ]) %*% kernel_vals) +
           (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
             matrix(c(1, parameters), ncol = 1))
       )
@@ -123,12 +141,18 @@ pme <- function(
         X,
         params,
         weights,
-        lambda[tuning_idx]
+        lambda[tuning_idx],
+        template
       )
 
       f_embedding <- function(parameters) {
+        if (template == "euclidean") {
+          kernel_vals <- etaFunc(parameters, params, 4 - d)
+        } else if (template == "sphere") {
+          kernel_vals <- assist::sphere(rbind(parameters, params))[1, -1]
+        }
         as.vector(
-          (t(spline_coefs[1:I, ]) %*% etaFunc(parameters, params, 4 - d)) +
+          (t(spline_coefs[1:I, ]) %*% kernel_vals) +
             (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
               matrix(c(1, parameters), ncol = 1))
         )
@@ -181,9 +205,21 @@ pme <- function(
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
     embeddings[[tuning_idx]] <- function(parameters) {
+      if (template == "euclidean") {
+        kernel_vals <- etaFunc(
+          parameters,
+          parameterization[[tuning_idx]],
+          4 - d
+        )
+      } else if (template == "sphere") {
+        kernel_vals <- assist::sphere(rbind(
+          parameters,
+          parameterization[[tuning_idx]],
+          4 - d
+        ))[1, -1]
+      }
       as.vector(
-        (t(coefs[[tuning_idx]][1:I, ]) %*%
-          etaFunc(parameters, parameterization[[tuning_idx]], 4 - d)) +
+        (t(coefs[[tuning_idx]][1:I, ]) %*% kernel_vals) +
           (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*%
             matrix(c(1, parameters), ncol = 1))
       )
@@ -200,8 +236,13 @@ pme <- function(
   coefs_opt <- coefs[[optimal_idx]]
   params_opt <- parameterization[[optimal_idx]]
   embedding_opt <- function(parameters) {
+    if (template == "euclidean") {
+      kernel_vals <- etaFunc(parameters, params_opt, 4 - d)
+    } else if (template == "sphere") {
+      kernel_vals <- assist::sphere(rbind(parameters, params_opt))[1, -1]
+    }
     as.vector(
-      (t(coefs_opt[1:I, ]) %*% etaFunc(parameters, params_opt, 4 - d)) +
+      (t(coefs_opt[1:I, ]) %*% kernel_vals) +
         (t(coefs_opt[(I + 1):(I + d + 1), ]) %*%
           matrix(c(1, parameters), ncol = 1))
     )
@@ -230,7 +271,8 @@ pme <- function(
     parameterization = parameterization,
     tuning_vec = lambda,
     embeddings = embeddings,
-    initialization_algorithm = initialization_algorithm
+    initialization_algorithm = initialization_algorithm,
+    template = template
   )
   pme_out
 }
@@ -273,7 +315,8 @@ new_pme <- function(
   parameterization,
   tuning_vec,
   embeddings,
-  initialization_algorithm
+  initialization_algorithm,
+  template
 ) {
   pme_list <- list(
     embedding_map = embedding_map,
@@ -287,7 +330,8 @@ new_pme <- function(
     parameterization = parameterization,
     tuning_vec = tuning_vec,
     embeddings = embeddings,
-    initialization = initialization_algorithm
+    initialization = initialization_algorithm,
+    template = template
   )
   vctrs::new_vctr(pme_list, class = "pme")
 }
@@ -319,6 +363,7 @@ is_pme <- function(x) {
 #' @return A list used to initialize PME.
 #'
 #' @noRd
+#' @export
 initialize_pme <- function(
   x,
   d,
@@ -327,13 +372,14 @@ initialize_pme <- function(
   max_clusters,
   component_type = "centers",
   algorithm = "isomap",
-  subsample_size = 5
+  subsample_size = 5,
+  template = "euclidean"
 ) {
   est <- hdmde(x, min_clusters, alpha, max_clusters)
   if (component_type == "subsample") {
     cluster_points <- matrix(nrow = 1, ncol = ncol(x))
     point_weights <- vector()
-    for (cluster in 1:nrow(est$mu)) {
+    for (cluster in seq_len(nrow(est$mu))) {
       temp_x <- x[est$km$cluster == cluster, ] %>%
         matrix(ncol = ncol(x))
       # cluster_distances <- map(
@@ -342,7 +388,7 @@ initialize_pme <- function(
       # ) %>%
       #   reduce(c)
       cluster_sample <- sample(
-        1:nrow(temp_x),
+        seq_len(nrow(temp_x)),
         size = subsample_size,
         replace = TRUE
       )
@@ -358,6 +404,7 @@ initialize_pme <- function(
         est$theta_hat[cluster] * n_occurences
       )
     }
+
     cluster_points <- cluster_points[-1, ]
     est_order <- order(cluster_points[, 1])
     centers <- cluster_points[est_order, ]
@@ -369,6 +416,7 @@ initialize_pme <- function(
     centers <- est$mu[est_order, ]
     W <- diag(theta_hat)
   }
+
   sigma <- est$sigma
   X <- centers
   I <- nrow(centers)
@@ -417,24 +465,44 @@ initialize_pme <- function(
   # }
 
   dissimilarity <- as.matrix(stats::dist(X))
-  init_parameterization <- vegan::isomap(
-    dissimilarity,
-    ndim = d,
-    k = min(
-      floor(nrow(dissimilarity) / 2),
-      2 * ceiling(sqrt(nrow(dissimilarity)))
-    ),
-    fragmentedOK = TRUE
-  )
+
+  if (template == "sphere") {
+    init_parameterization <- vegan::isomap(
+      dissimilarity,
+      ndim = 3,
+      k = min(
+        floor(nrow(dissimilarity) / 2),
+        2 * ceiling(sqrt(nrow(dissimilarity)))
+      ),
+      fragmentedOK = TRUE
+    )
+
+    # scale outputs and normalize to unit sphere
+    output_cart <- init_parameterization$points
+    output_cart <- scale(output_cart, scale = FALSE)
+    output_cart <- output_cart / sqrt(Rfast::rowsums(output_cart^2))
+
+    output <- pracma::cart2sph(output_cart)[, -3]
+  } else {
+    init_parameterization <- vegan::isomap(
+      dissimilarity,
+      ndim = d,
+      k = min(
+        floor(nrow(dissimilarity) / 2),
+        2 * ceiling(sqrt(nrow(dissimilarity)))
+      ),
+      fragmentedOK = TRUE
+    )
+
+    output <- init_parameterization$points |>
+      as.matrix()
+  }
 
   # output <- dimRed::as.data.frame(init_parameterization) %>%
   #   as.matrix()
 
-  output <- init_parameterization$points |>
-    as.matrix()
-
   list(
-    parameterization = matrix(output[, 1:d], nrow = nrow(X)),
+    parameterization = matrix(output, nrow = nrow(X)),
     theta_hat = theta_hat,
     centers = centers,
     sigma = sigma,
@@ -452,9 +520,15 @@ initialize_pme <- function(
 #' @return A matrix of spline coefficients.
 #'
 #' @noRd
-calc_coefficients <- function(X, t, weights, w) {
-  t_val <- cbind(rep(1, nrow(t)), t)
-  E <- calcE(t, 4 - ncol(t))
+calc_coefficients <- function(X, t, weights, w, template) {
+  if (template == "euclidean") {
+    t_val <- cbind(rep(1, nrow(t)), t)
+    E <- calcE(t, 4 - ncol(t))
+  } else if (template == "sphere") {
+    t_val <- rep(1, nrow(t)) |>
+      matrix(ncol = 1)
+    E <- assist::sphere(t)
+  }
   solve_weighted_spline(E, weights, t_val, X, w, ncol(t), ncol(X))
 }
 
@@ -642,139 +716,4 @@ calc_msd <- function(x, km, f, t, D, d) {
     mean()
 
   mse
-}
-
-
-#' Create PME Initialization
-#'
-#' @param x A numeric matrix of data.
-#' @param d The intrinsic dimension.
-#' @param min_clusters The minimum number of mixture components.
-#' @param alpha Significance level.
-#' @param max_clusters Maximum number of components.
-#'
-#' @return A list used to initialize PME.
-#'
-#' @noRd
-initialize_pme <- function(
-  x,
-  d,
-  min_clusters,
-  alpha,
-  max_clusters,
-  component_type = "centers",
-  algorithm = "isomap",
-  subsample_size = 5
-) {
-  est <- hdmde(x, min_clusters, alpha, max_clusters)
-  if (component_type == "subsample") {
-    cluster_points <- matrix(nrow = 1, ncol = ncol(x))
-    point_weights <- vector()
-    for (cluster in 1:nrow(est$mu)) {
-      temp_x <- x[est$km$cluster == cluster, ] %>%
-        matrix(ncol = ncol(x))
-      # cluster_distances <- map(
-      #   1:nrow(temp_x),
-      #   ~ dist_euclidean(est$mu[cluster, ], temp_x[.x, ])
-      # ) %>%
-      #   reduce(c)
-      cluster_sample <- sample(
-        1:nrow(temp_x),
-        size = subsample_size,
-        replace = TRUE
-      )
-      points <- unique(cluster_sample)
-      n_occurences <- table(cluster_sample)
-
-      cluster_points <- rbind(
-        cluster_points,
-        temp_x[points, ]
-      )
-      point_weights <- c(
-        point_weights,
-        est$theta_hat[cluster] * n_occurences
-      )
-    }
-    cluster_points <- cluster_points[-1, ]
-    est_order <- order(cluster_points[, 1])
-    centers <- cluster_points[est_order, ]
-    W <- diag(point_weights)
-    theta_hat <- point_weights
-  } else {
-    est_order <- order(est$mu[, 1])
-    theta_hat <- est$theta_hat[est_order]
-    centers <- est$mu[est_order, ]
-    W <- diag(theta_hat)
-  }
-  sigma <- est$sigma
-  X <- centers
-  I <- nrow(centers)
-
-  # if (algorithm == "diffusion_maps") {
-  # init_parameterization <- dimRed::embed(
-  #   X,
-  #   "DiffusionMaps",
-  #   ndim = d,
-  #   .mute = c("message", "output")
-  # )
-  # } else if (algorithm == "hessian_eigenmaps") {
-  #   init_parameterization <- dimRed::embed(
-  #     X,
-  #     "HLLE",
-  #     knn = floor(sqrt(nrow(X))),
-  #     ndim = d
-  #     # .mute = c("message", "output")
-  #   )
-  # } else if (algorithm == "laplacian_eigenmaps") {
-  # init_parameterization <- dimRed::embed(
-  #   X,
-  #   "LaplacianEigenmaps",
-  #   knn = floor(sqrt(nrow(X))),
-  #   ndim = d,
-  #   .mute = c("message", "output")
-  # )
-  # } else if (algorithm == "lle") {
-  #   init_parameterization <- dimRed::embed(
-  #     X,
-  #     "LLE",
-  #     knn = floor(sqrt(nrow(X))),
-  #     ndim = d
-  #     # .mute = c("message", "output")
-  #   )
-  # } else {
-  # init_parameterization <- dimRed::embed(
-  #   X,
-  #   "Isomap",
-  #   knn = floor(sqrt(nrow(X))),
-  #   ndim = d,
-  #   .mute = c("message", "output")
-  # )
-  #   dissimilarity <- as.matrix(stats::dist(X))
-  #   init_parameterization <- vegan::isomap(dissimilarity, ndim = d, k = floor(sqrt(nrow(dissimilarity))))
-  # }
-
-  dissimilarity <- as.matrix(stats::dist(X))
-  init_parameterization <- vegan::isomap(
-    dissimilarity,
-    ndim = d,
-    k = min(
-      floor(nrow(dissimilarity) / 2),
-      2 * ceiling(sqrt(nrow(dissimilarity)))
-    ),
-    fragmentedOK = TRUE
-  )
-
-  # output <- dimRed::as.data.frame(init_parameterization) %>%
-  #   as.matrix()
-
-  output <- init_parameterization$points |>
-    as.matrix()
-
-  list(
-    parameterization = matrix(output[, 1:d], nrow = nrow(X)),
-    theta_hat = theta_hat,
-    centers = centers,
-    sigma = sigma,
-    km = est$km
-  )
 }

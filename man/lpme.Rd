@@ -7,6 +7,7 @@
 lpme(
   data,
   d,
+  template = "euclidean",
   smoothing_method = "spline",
   gamma = NULL,
   lambda = NULL,

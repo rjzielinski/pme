@@ -35,7 +35,8 @@ new_lpme <- function(
   coefficient_functions,
   parameterization_list,
   smoothing_method,
-  initialization_algorithm
+  initialization_algorithm,
+  template
 ) {
   lpme_list <- list(
     embedding_map = embedding_map,
@@ -53,7 +54,8 @@ new_lpme <- function(
     sol_coef_functions = coefficient_functions,
     parameterization_list = parameterization_list,
     smoothing_method = smoothing_method,
-    initialization = initialization_algorithm
+    initialization = initialization_algorithm,
+    template = template
   )
   vctrs::new_vctr(lpme_list, class = "lpme")
 }
@@ -93,6 +95,7 @@ is_lpme <- function(x) {
 lpme <- function(
   data,
   d,
+  template = "euclidean",
   smoothing_method = "spline",
   gamma = NULL,
   lambda = NULL,
@@ -138,28 +141,40 @@ lpme <- function(
     }
   }
 
+  reduced_data <- reduce_data(
+    data,
+    time_points,
+    alpha,
+    max_clusters,
+    min_clusters,
+    init_type
+  )
+
   initialization <- initialize_lpme(
     data,
-    init,
+    reduced_data,
     time_points,
+    init,
     d,
-    alpha,
     max_clusters,
     min_clusters,
     initialization = initialization_algorithm,
     initialization_type = init_type,
-    neighbors = init_neighbors
+    neighbors = init_neighbors,
+    template = template
   )
 
   init_pme_list <- fit_init_pmes(
     data,
+    reduced_data,
+    initialization,
     time_points,
     init,
-    initialization,
     d,
-    lambda
+    lambda,
+    template
   )
-  splines <- merge_spline_coefs(init_pme_list, d, time_points)
+  splines <- merge_spline_coefs(init_pme_list, d, time_points, template)
 
   spline_coefficients <- splines$coef_full
   x_merged <- splines$x_test
@@ -204,8 +219,15 @@ lpme <- function(
       f_new <- function(t) {
         coefs <- f_coef_list$f(t[1])
         coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+
+        if (template == "euclidean") {
+          kernel_vals <- etaFunc(t[-1], t_initial, 4 - d)
+        } else if (template == "sphere") {
+          kernel_vals <- assist::sphere(rbind(t[-1], t_initial))[1, -1]
+        }
+
         return_vec <- t(coef_mat[1:n_knots, ]) %*%
-          etaFunc(t[-1], t_initial, 4 - d) +
+          kernel_vals +
           t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
             matrix(c(1, t[-1]), ncol = 1)
         c(t[1], return_vec)
@@ -278,7 +300,8 @@ lpme <- function(
       gamma2 = 3,
       r_full2 = times,
       w = gamma[tuning_ind],
-      smoothing_method = smoothing_method
+      smoothing_method = smoothing_method,
+      template = template
     )
 
     data_n <- sapply(time_points, function(x) nrow(data[data[, 1] == x, ]))
@@ -338,7 +361,8 @@ lpme <- function(
     coefficient_functions = func_coef,
     parameterization_list = TNEW_new,
     smoothing_method = smoothing_method,
-    initialization_algorithm = initialization_algorithm
+    initialization_algorithm = initialization_algorithm,
+    template = template
   )
 
   lpme_out
@@ -395,123 +419,165 @@ parameterize <- function(object, x) {
   return(estimate)
 }
 
+
+reduce_data <- function(
+  df,
+  time_points,
+  alpha,
+  max_comp,
+  min_comp,
+  component_type,
+  subsample_size = 5
+) {
+  init_timevals <- list()
+  init_theta_hat <- list()
+  init_centers <- list()
+  init_sigma <- list()
+  init_clusters <- list()
+
+  init_dimension_size <- dim(df[, -1])
+  init_D <- init_dimension_size[2]
+
+  if (is.null(min_comp)) {
+    init_N0 <- 10 * init_D
+  } else {
+    init_N0 <- min_comp
+  }
+
+  for (idx in seq_along(time_points)) {
+    init_df_temp <- df[df[, 1] == time_points[idx], -1]
+    init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
+
+    if (component_type == "subsample") {
+      cluster_points <- matrix(nrow = 1, ncol = init_D)
+      point_weights <- vector()
+      for (cluster in seq_len(nrow(init_est_temp$mu))) {
+        temp_x <- init_df_temp[init_est_temp$km$cluster == cluster, ] %>%
+          matrix(ncol = init_D)
+
+        cluster_sample <- sample(
+          seq_len(nrow(temp_x)),
+          size = subsample_size,
+          replace = TRUE
+        )
+        points <- unique(cluster_sample)
+        n_occurences <- table(cluster_sample)
+
+        cluster_points <- rbind(
+          cluster_points,
+          temp_x[points, ]
+        )
+        point_weights <- c(
+          point_weights,
+          init_est_temp$theta_hat[cluster] * n_occurences
+        )
+      }
+
+      cluster_points <- cluster_points[-1, ]
+      est_order <- order(cluster_points[, 1])
+
+      init_centers[[idx]] <- cluster_points[est_order, ]
+      init_timevals[[idx]] <- rep(
+        time_points[idx],
+        nrow(cluster_points)
+      )
+      init_theta_hat[[idx]] <- point_weights[est_order]
+      init_sigma[[idx]] <- init_est_temp$sigma
+      init_clusters[[idx]] <- init_est_temp$km
+    } else {
+      est_order <- order(init_est_temp$mu[, 1])
+
+      init_centers[[idx]] <- init_est_temp$mu[est_order, ]
+      init_theta_hat[[idx]] <- init_est_temp$theta_hat[est_order]
+      init_sigma[[idx]] <- init_est_temp$sigma
+      init_timevals[[idx]] <- rep(time_points[idx], nrow(init_est_temp$mu))
+      init_clusters[[idx]] <- init_est_temp$km
+    }
+  }
+
+  init_timevals <- purrr::reduce(init_timevals, c)
+  init_theta_hat <- purrr::reduce(init_theta_hat, c)
+  init_centers <- purrr::reduce(init_centers, rbind)
+  init_sigma <- purrr::reduce(init_sigma, c)
+  init_I <- length(init_theta_hat)
+
+  reduced_list <- list(
+    centers = init_centers,
+    weights = init_theta_hat,
+    sigma = init_sigma,
+    times = init_timevals,
+    I = init_I,
+    clusters = init_clusters
+  )
+
+  reduced_list
+}
+
+
 initialize_lpme <- function(
   df,
-  init,
+  reduced_data,
   time_points,
+  init,
   d,
-  alpha,
   max_comp,
   min_comp,
   initialization,
   initialization_type,
-  neighbors = NA
+  neighbors = NA,
+  template
 ) {
+  init_centers <- reduced_data$centers
+
   if (init %in% c("first", "full")) {
     if (init == "first") {
       init_df <- df[df[, 1] == time_points[1], -1]
+
       init_pme <- pme(
         init_df,
         d,
+        template = template,
         initialization_algorithm = initialization,
-        initialization_type = initialization_type
+        initialization_type = initialization_type,
+        min_clusters = min_comp,
+        max_clusters = max_comp
       )
+
+      opt_run <- which.min(init_pme$MSD)
+
       init_pme_center_order <- order(init_pme$knots$centers[, 1])
       init_pme_centers <- init_pme$knots$centers[init_pme_center_order, ]
 
-      init_timevals <- list()
-      init_theta_hat <- list()
-      init_centers <- list()
-      init_sigma <- list()
-      init_clusters <- list()
-      init_parameterization <- list()
-      init_D <- ncol(df[, -1])
-      init_n <- nrow(df)
-      lambda <- 4 - d
-      init_N0 <- min_comp
+      nearest_clusters <- purrr::map(
+        seq_len(nrow(init_centers)),
+        ~ {
+          apply(init_pme_centers, 1, dist_euclidean, y = init_centers[.x, ]) |>
+            as.vector() |>
+            which.min()
+        }
+      ) |>
+        do.call(what = c)
 
-      for (idx in 1:length(time_points)) {
-        init_df_temp <- df[df[, 1] == time_points[idx], -1]
-        init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
-        est_temp_order <- order(init_est_temp$mu[, 1])
-        init_timevals[[idx]] <- rep(time_points[idx], dim(init_est_temp$mu)[1])
-        init_theta_hat[[idx]] <- init_est_temp$theta_hat[est_temp_order]
-        init_centers[[idx]] <- init_est_temp$mu[est_temp_order, ]
-        init_sigma[[idx]] <- init_est_temp$sigma
-        init_clusters[[idx]] <- init_est_temp$km
+      params_init <- init_pme$parameterization[[opt_run]][
+        nearest_clusters,
+      ] %>%
+        matrix(nrow = reduced_data$I, byrow = TRUE)
 
-        nearest_clusters <- purrr::map(
-          1:nrow(init_centers[[idx]]),
-          ~ which.min(as.vector(apply(
-            init_pme_centers,
-            1,
-            dist_euclidean,
-            y = init_centers[[idx]][.x, ]
-          )))
-        ) %>%
-          purrr::reduce(c)
-
-        opt_run <- which.min(init_pme$MSD)
-        params_init <- init_pme$parameterization[[opt_run]][
-          nearest_clusters,
-        ] %>%
-          matrix(nrow = nrow(init_centers[[idx]]), byrow = TRUE)
-
-        init_parameterization[[idx]] <- purrr::map(
-          1:nrow(init_centers[[idx]]),
-          ~ projection_pme(
-            init_centers[[idx]][.x, ],
-            init_pme$embedding_map,
-            params_init[.x, ]
-          )
-        ) %>%
-          purrr::reduce(rbind)
-      }
+      init_parameterization <- purrr::map(
+        seq_len(reduced_data$I),
+        ~ projection_pme(
+          init_centers[.x, ],
+          init_pme$embedding_map,
+          params_init[.x, ]
+        )
+      ) %>%
+        do.call(what = rbind)
 
       init_list <- list(
-        timevals = init_timevals,
-        theta_hat = init_theta_hat,
-        centers = init_centers,
-        sigma = init_sigma,
-        clusters = init_clusters,
-        isomap = init_parameterization
+        params = init_parameterization,
+        init_algorithm = init_pme
       )
     } else if (init == "full") {
-      init_timevals <- list()
-      init_theta_hat <- list()
-      init_centers <- list()
-      init_sigma <- list()
-      init_clusters <- list()
-
-      init_dimension_size <- dim(df[, -1])
-      init_D <- init_dimension_size[2]
-      init_n <- init_dimension_size[1]
-      lambda <- 4 - d
-      if (is.null(min_comp)) {
-        init_N0 <- 10 * init_D
-      } else {
-        init_N0 <- min_comp
-      }
-
-      for (idx in seq_along(time_points)) {
-        init_df_temp <- df[df[, 1] == time_points[idx], -1]
-        init_est_temp <- hdmde(init_df_temp, init_N0, alpha, max_comp)
-        est_temp_order <- order(init_est_temp$mu[, 1])
-        init_timevals[[idx]] <- rep(time_points[idx], dim(init_est_temp$mu)[1])
-        init_theta_hat[[idx]] <- init_est_temp$theta_hat[est_temp_order]
-        init_centers[[idx]] <- init_est_temp$mu[est_temp_order, ]
-        init_sigma[[idx]] <- init_est_temp$sigma
-        init_clusters[[idx]] <- init_est_temp$km
-      }
-
-      init_timevals <- purrr::reduce(init_timevals, c)
-      init_theta_hat <- purrr::reduce(init_theta_hat, c)
-      init_centers <- purrr::reduce(init_centers, rbind)
-      init_sigma <- purrr::reduce(init_sigma, c)
-      init_W <- diag(init_theta_hat)
-      init_X <- init_centers
-      init_I <- length(init_theta_hat)
-
       if (is.na(neighbors)) {
         # if centers are sparse, make sure isomap finds links between centers
         # not just across time points
@@ -519,30 +585,55 @@ initialize_lpme <- function(
         neighbors <- floor(sqrt(centers_per_time)) * length(time_points)
       }
 
-      init_dissimilarity_matrix <- as.matrix(stats::dist(init_X))
-      init_isomap <- vegan::isomap(
-        init_dissimilarity_matrix,
-        ndim = d,
-        k = neighbors
-      )
+      init_dissimilarity_matrix <- as.matrix(stats::dist(init_centers))
+
+      if (template == "sphere") {
+        init_isomap <- vegan::isomap(
+          init_dissimilarity_matrix,
+          ndim = 3,
+          k = neighbors
+        )
+
+        params_cartesian <- init_isomap$points
+        params_cartesian <- scale(params_cartesian, scale = FALSE)
+        params_cartesian <- params_cartesian /
+          sqrt(Rfast::rowsums(params_cartesian^2))
+
+        params <- pracma::cart2sph(params_cartesian)[, -3]
+      } else {
+        init_isomap <- vegan::isomap(
+          init_dissimilarity_matrix,
+          ndim = d,
+          k = neighbors
+        )
+
+        params <- init_isomap$points
+      }
 
       init_list <- list(
-        timevals = init_timevals,
-        theta_hat = init_theta_hat,
-        centers = init_centers,
-        sigma = init_sigma,
-        clusters = init_clusters,
-        isomap = init_isomap
+        params = params,
+        init_algorithm = init_isomap
       )
     }
 
-    return(init_list)
+    init_list
   } else {
     print("Please choose `init` option 'first' or 'full'.")
   }
 }
 
-fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
+fit_init_pmes <- function(
+  df,
+  reduced_data,
+  init,
+  time_points,
+  init_option,
+  d,
+  lambda,
+  template
+) {
+  init_times <- reduced_data$times
+
   pme_results <- list()
   kernel_coefs <- list()
   polynomial_coefs <- list()
@@ -556,49 +647,25 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
   errors <- vector()
 
   for (idx in seq_along(time_points)) {
-    df_temp <- df[df[, 1] == time_points[idx], ]
+    time_val <- time_points[idx]
 
-    if (init_option == "full") {
-      pme_results[[idx]] <- pme(
-        data = df_temp[, -1],
-        d = d,
-        lambda = lambda,
-        initialization = list(
-          parameterization = matrix(
-            init$isomap$points[init$timevals == time_points[idx], ],
-            nrow = length(init$theta_hat[init$timevals == time_points[idx]])
-          ),
-          theta_hat = init$theta_hat[init$timevals == time_points[idx]],
-          centers = init$centers[init$timevals == time_points[idx], ],
-          sigma = init$sigma[idx],
-          km = init$clusters[[idx]]
-        ),
-        verbose = FALSE,
-        print_plots = FALSE
-      )
-    } else if (init_option == "first") {
-      pme_results[[idx]] <- pme(
-        data = df_temp[, -1],
-        d = d,
-        lambda = lambda,
-        initialization = list(
-          parameterization = init$isomap[[idx]],
-          theta_hat = init$theta_hat[[idx]],
-          centers = init$centers[[idx]],
-          sigma = init$sigma[[idx]],
-          km = init$clusters[[idx]]
-        ),
-        verbose = FALSE,
-        print_plots = FALSE
-      )
-    } else {
-      pme_results[[idx]] <- pme(
-        data = df_temp[, -1],
-        d = d,
-        lambda = lambda,
-        verbose = FALSE
-      )
-    }
+    df_temp <- df[df[, 1] == time_val, -1]
+
+    pme_results[[idx]] <- pme(
+      data = df_temp,
+      d = d,
+      template = template,
+      lambda = lambda,
+      initialization = list(
+        parameterization = init$params[init_times == time_val, ],
+        theta_hat = reduced_data$weights[init_times == time_val],
+        centers = reduced_data$centers[init_times == time_val, ],
+        sigma = reduced_data$sigma[idx],
+        km = reduced_data$clusters[[idx]]
+      ),
+      verbose = FALSE,
+      print_plots = FALSE
+    )
 
     opt_run <- which.min(pme_results[[idx]]$MSD)
     funcs[[idx]] <- pme_results[[idx]]$embedding_map
@@ -645,7 +712,7 @@ fit_init_pmes <- function(df, time_points, init_option, init, d, lambda) {
   init_pme_list
 }
 
-merge_spline_coefs <- function(pme_list, d, time_points) {
+merge_spline_coefs <- function(pme_list, d, time_points, template) {
   lambda <- vector()
   x_vals <- list()
   spline_coefs <- list()
@@ -659,15 +726,23 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
   for (time_idx in 1:length(time_points)) {
     lambda[time_idx] <- pme_list$pme_results[[time_idx]]$tuning
     f <- pme_list$funcs[[time_idx]]
+
     output <- purrr::map(
       1:n_knots,
       ~ f(params[.x, ])
     ) %>%
       purrr::reduce(rbind)
+
     x_vals[[time_idx]] <- cbind(time_points[time_idx], output)
 
-    R <- cbind(rep(1, n_knots), params)
-    E <- calcE(params, 4 - d)
+    if (template == "euclidean") {
+      R <- cbind(rep(1, n_knots), params)
+      E <- calcE(params, 4 - d)
+    } else if (template == "sphere") {
+      R <- rep(1, nrow(params)) |>
+        matrix(ncol = 1)
+      E <- assist::sphere(params)
+    }
 
     spline_coefs[[time_idx]] <- solve_spline(
       E,
@@ -680,6 +755,7 @@ merge_spline_coefs <- function(pme_list, d, time_points) {
       t() %>%
       matrix(nrow = 1)
   }
+
   coef_full <- purrr::reduce(spline_coefs, rbind)
   x_test <- purrr::reduce(x_vals, rbind)
 
@@ -881,7 +957,8 @@ calc_mse_cv <- function(
   gamma2,
   r_full2,
   w,
-  smoothing_method
+  smoothing_method,
+  template
 ) {
   if (leave_one_out == TRUE) {
     k <- length(time_points)
@@ -895,6 +972,7 @@ calc_mse_cv <- function(
   }
   cv_mse <- vector()
   r_mat <- gen_parameterization(r, n_knots, d)
+
   for (fold_idx in 1:k) {
     fold_times <- time_points[folds != fold_idx]
     r_full_cv <- tidyr::expand_grid(fold_times, r_mat) %>%
@@ -902,10 +980,18 @@ calc_mse_cv <- function(
 
     x_vals <- purrr::map(1:nrow(r_full_cv), ~ f(r_full_cv[.x, ])) %>%
       purrr::reduce(rbind)
+
     spline_coefs <- list()
     for (idx in 1:length(fold_times)) {
-      R <- cbind(rep(1, n_knots), r_mat)
-      E <- calcE(r_mat, gamma)
+      if (template == "euclidean") {
+        R <- cbind(rep(1, n_knots), r_mat)
+        E <- calcE(r_mat, gamma)
+      } else if (template == "sphere") {
+        R <- rep(1, n_knots) |>
+          matrix(ncol = 1)
+        E <- assist::sphere(r_mat)
+      }
+
       spline_coefs[[idx]] <- solve_spline(
         E,
         R,
@@ -920,6 +1006,9 @@ calc_mse_cv <- function(
     coef_cv <- purrr::reduce(spline_coefs, rbind)
 
     if (smoothing_method == "spline") {
+      # no spherical option for longitudinal smoothing -
+      # time points should always be related in Euclidean space
+
       r_cv <- matrix(
         r_full2[r_full2[, 1] %in% fold_times, ],
         ncol = 1
@@ -951,8 +1040,15 @@ calc_mse_cv <- function(
       f_new_cv <- function(t) {
         coefs <- f_coef_cv(t[1])
         coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+
+        if (template == "euclidean") {
+          kernel_vals <- etaFunc(t[-1], r_initial, gamma)
+        } else if (template == "sphere") {
+          kernel_vals <- assist::sphere(rbind(t[-1], r_initial))[1, -1]
+        }
+
         return_vec <- t(coef_mat[1:n_knots, ]) %*%
-          etaFunc(t[-1], r_initial, gamma) +
+          kernel_vals +
           t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
             matrix(c(1, t[-1]), ncol = 1)
         return(c(t[1], return_vec))
@@ -982,6 +1078,7 @@ calc_mse_cv <- function(
 
     temp_df <- df[!(df[, 1] %in% fold_times), ]
     temp_init_param <- init_param[!(df[, 1] %in% fold_times), ]
+
     cv_projections <- purrr::map(
       1:nrow(temp_df),
       ~ projection_lpme(temp_df[.x, ], f_new_cv, temp_init_param[.x, ])
@@ -994,11 +1091,13 @@ calc_mse_cv <- function(
     ) %>%
       purrr::reduce(cbind) %>%
       t()
+
     error_cv <- purrr::map(
       1:nrow(cv_points),
       ~ dist_euclidean(temp_df[.x, ], cv_points[.x, ])
     ) %>%
       purrr::reduce(c)
+
     cv_mse[fold_idx] <- mean(error_cv^2)
   }
   cv_mse

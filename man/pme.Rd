@@ -7,6 +7,7 @@
 pme(
   data,
   d,
+  template = "euclidean",
   initialization = NULL,
   initialization_algorithm = "isomap",
   initialization_type = "centers",
