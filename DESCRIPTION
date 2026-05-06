@@ -20,6 +20,7 @@ Imports:
     mvtnorm,
     nloptr,
     plotly,
+    pracma,
     purrr,
     Rcpp,
     Rfast,
