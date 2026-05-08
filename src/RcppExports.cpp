@@ -94,18 +94,6 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
-// eta_kernel_old
-double eta_kernel_old(arma::vec t, int lambda);
-RcppExport SEXP _pme_eta_kernel_old(SEXP tSEXP, SEXP lambdaSEXP) {
-BEGIN_RCPP
-    Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< arma::vec >::type t(tSEXP);
-    Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
-    rcpp_result_gen = Rcpp::wrap(eta_kernel_old(t, lambda));
-    return rcpp_result_gen;
-END_RCPP
-}
 // calcE
 arma::mat calcE(const arma::mat& x, int lambda);
 RcppExport SEXP _pme_calcE(SEXP xSEXP, SEXP lambdaSEXP) {
@@ -128,6 +116,68 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< const arma::mat& >::type tau(tauSEXP);
     Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
     rcpp_result_gen = Rcpp::wrap(etaFunc(t, tau, lambda));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sphere_q
+double sphere_q(double z, int m);
+RcppExport SEXP _pme_sphere_q(SEXP zSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< double >::type z(zSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(sphere_q(z, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sphere_kernel
+double sphere_kernel(arma::vec x, arma::vec y, int m);
+RcppExport SEXP _pme_sphere_kernel(SEXP xSEXP, SEXP ySEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type x(xSEXP);
+    Rcpp::traits::input_parameter< arma::vec >::type y(ySEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(sphere_kernel(x, y, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// sphere_kernel_func
+arma::vec sphere_kernel_func(const arma::vec& t, const arma::mat& tau, int m);
+RcppExport SEXP _pme_sphere_kernel_func(SEXP tSEXP, SEXP tauSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type t(tSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type tau(tauSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(sphere_kernel_func(t, tau, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// calcE_sphere
+arma::mat calcE_sphere(const arma::mat& x, int m);
+RcppExport SEXP _pme_calcE_sphere(SEXP xSEXP, SEXP mSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type x(xSEXP);
+    Rcpp::traits::input_parameter< int >::type m(mSEXP);
+    rcpp_result_gen = Rcpp::wrap(calcE_sphere(x, m));
+    return rcpp_result_gen;
+END_RCPP
+}
+// eta_kernel_old
+double eta_kernel_old(arma::vec t, int lambda);
+RcppExport SEXP _pme_eta_kernel_old(SEXP tSEXP, SEXP lambdaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< arma::vec >::type t(tSEXP);
+    Rcpp::traits::input_parameter< int >::type lambda(lambdaSEXP);
+    rcpp_result_gen = Rcpp::wrap(eta_kernel_old(t, lambda));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -293,9 +343,13 @@ static const R_CallMethodDef CallEntries[] = {
     {"_pme_logspace_sum_vec", (DL_FUNC) &_pme_logspace_sum_vec, 1},
     {"_pme_log_smoothing_kernel", (DL_FUNC) &_pme_log_smoothing_kernel, 3},
     {"_pme_eta_kernel", (DL_FUNC) &_pme_eta_kernel, 2},
-    {"_pme_eta_kernel_old", (DL_FUNC) &_pme_eta_kernel_old, 2},
     {"_pme_calcE", (DL_FUNC) &_pme_calcE, 2},
     {"_pme_etaFunc", (DL_FUNC) &_pme_etaFunc, 3},
+    {"_pme_sphere_q", (DL_FUNC) &_pme_sphere_q, 2},
+    {"_pme_sphere_kernel", (DL_FUNC) &_pme_sphere_kernel, 3},
+    {"_pme_sphere_kernel_func", (DL_FUNC) &_pme_sphere_kernel_func, 3},
+    {"_pme_calcE_sphere", (DL_FUNC) &_pme_calcE_sphere, 2},
+    {"_pme_eta_kernel_old", (DL_FUNC) &_pme_eta_kernel_old, 2},
     {"_pme_calc_nearest_x", (DL_FUNC) &_pme_calc_nearest_x, 2},
     {"_pme_calc_init_param", (DL_FUNC) &_pme_calc_init_param, 3},
     {"_pme_calc_A", (DL_FUNC) &_pme_calc_A, 3},

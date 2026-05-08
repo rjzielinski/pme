@@ -31,6 +31,31 @@ log_smoothing_kernel_r <- function(x, mu, sigma) {
   return(output)
 }
 
+
+#' Sample points from the Fibonacci Sphere
+#'
+#' @param n The number of points
+#'
+#' @return A matrix of points, using spherical coordinates.
+#' @export
+fibonacci_sphere <- function(n) {
+  phi <- (1 + sqrt(5)) / 2
+  points <- 1:n
+
+  coord1 <- (points / phi) %% 1
+  coord2 <- points / n
+
+  theta <- 2 * pi * coord1
+  phi <- acos(1 - 2 * coord2)
+
+  x <- cos(theta) * sin(phi)
+  y <- sin(theta) * sin(phi)
+  z <- cos(phi)
+
+  pracma::cart2sph(cbind(x, y, z))[, -3]
+}
+
+
 #' Find the Coefficients of a Weighted Spline Function
 #'
 #' @param E A numeric matrix.
@@ -164,5 +189,102 @@ projection_lpme <- function(x, f, initial_guess, n_knots, d_new, gamma) {
     }
   } else {
     return(c(x[1], nlm_est$estimate))
+  }
+}
+
+#' Project onto Low-Dimensional Manifold
+#'
+#' @param x A value
+#' @param f A value
+#' @param initial_guess A value
+#'
+#' @return A value
+#' @export
+projection_lpme_opt <- function(x, f, initial_guess) {
+  x1 <- x[1]
+  init_param <- initial_guess[-1]
+
+  obj_fun <- function(t) {
+    dist_euclidean(x = x, f(c(x1, t)))
+  }
+
+  nlm_est <- try(
+    stats::nlm(
+      obj_fun,
+      p = init_param
+    ),
+    silent = TRUE
+  )
+  if (inherits(nlm_est, "try-error")) {
+    opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-07)
+    nlopt_est <- try(
+      nloptr::nloptr(
+        x0 = init_param,
+        obj_fun,
+        opts = opts
+      ),
+      silent = TRUE
+    )
+    if (inherits(nlopt_est, "try-error")) {
+      return(NULL)
+    } else {
+      return(c(x1, nlopt_est$solution))
+    }
+  } else {
+    return(c(x1, nlm_est$estimate))
+  }
+}
+
+#' Project onto Low-Dimensional Manifold
+#'
+#' @param x A value
+#' @param f A value
+#' @param initial_guess A value
+#'
+#' @return A value
+#' @export
+projection_lpme_opt2 <- function(x, f, initial_guess) {
+  f_new <- function(t) {
+    coefs <- f_coef_list$f(t[1])
+    coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+    return_vec <- t(coef_mat[1:n_knots, ]) %*%
+      etaFunc(t[-1], t_initial, 4 - d) +
+      t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
+        matrix(c(1, t[-1]), ncol = 1)
+    c(t[1], return_vec)
+  }
+
+  x1 <- x[1]
+  init_param <- initial_guess[-1]
+
+  obj_fun <- function(t) {
+    sum((x - f(c(x1, t)))^2)
+  }
+
+  nlm_est <- try(
+    stats::nlm(
+      obj_fun,
+      p = init_param
+    ),
+    silent = TRUE
+  )
+
+  if (inherits(nlm_est, "try-error")) {
+    opts <- list("algorithm" = "NLOPT_LN_COBYLA", "xtol_rel" = 1e-07)
+    nlopt_est <- try(
+      nloptr::nloptr(
+        x0 = init_param,
+        obj_fun,
+        opts = opts
+      ),
+      silent = TRUE
+    )
+    if (inherits(nlopt_est, "try-error")) {
+      return(NULL)
+    } else {
+      return(c(x1, nlopt_est$solution))
+    }
+  } else {
+    return(c(x1, nlm_est$estimate))
   }
 }

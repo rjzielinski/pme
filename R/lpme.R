@@ -16,7 +16,7 @@
 #' @param parameterization_list A list containing all matrices of parameters.
 #' @param smoothing_method Choose between smoothing by "spline" or "gp".
 #' @param initialization_algorithm The algorithm that was used to identify the initial parameter values.
-#'
+#' @param template The template manifold used in the LPME algorithm: euclidean or sphere.
 #' @return An object with class "lpme".
 #' @export
 new_lpme <- function(
@@ -74,6 +74,7 @@ is_lpme <- function(x) {
 #'
 #' @param data A numeric matrix of data.
 #' @param d The intrinsic dimension of the data.
+#' @param template The template manifold to be used in fitting: euclidean or sphere.
 #' @param smoothing_method The approach taken to smoothing over PME coefficients.
 #' @param gamma A vector of numeric smoothing parameter values.
 #' @param lambda A vector of numeric smoothing parameter values for the PME algorithm.
@@ -174,6 +175,7 @@ lpme <- function(
     lambda,
     template
   )
+
   splines <- merge_spline_coefs(init_pme_list, d, time_points, template)
 
   spline_coefficients <- splines$coef_full
@@ -190,6 +192,7 @@ lpme <- function(
   I_new <- n
   t_initial <- params %>%
     as.matrix()
+  params_cart <- pracma::sph2cart(cbind(t_initial, 1))
 
   MSE_seq_new <- vector()
   SOL_coef <- list()
@@ -216,21 +219,33 @@ lpme <- function(
         3
       )
 
-      f_new <- function(t) {
-        coefs <- f_coef_list$f(t[1])
-        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+      if (template == "euclidean") {
+        f_new <- function(t) {
+          coefs <- f_coef_list$f(t[1])
+          coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
 
-        if (template == "euclidean") {
           kernel_vals <- etaFunc(t[-1], t_initial, 4 - d)
-        } else if (template == "sphere") {
-          kernel_vals <- assist::sphere(rbind(t[-1], t_initial))[1, -1]
-        }
 
-        return_vec <- t(coef_mat[1:n_knots, ]) %*%
-          kernel_vals +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
-            matrix(c(1, t[-1]), ncol = 1)
-        c(t[1], return_vec)
+          return_vec <- t(coef_mat[1:n_knots, ]) %*%
+            kernel_vals +
+            t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
+              matrix(c(1, t[-1]), ncol = 1)
+          c(t[1], return_vec)
+        }
+      } else if (template == "sphere") {
+        f_new <- function(t) {
+          coefs <- f_coef_list$f(t[1])
+          coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+
+          param_vec_cart <- pracma::sph2cart(c(t[-1], 1))
+          kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+          return_vec <- t(coef_mat[1:n_knots, ]) %*%
+            kernel_vals +
+            t(coef_mat[n_knots + 1, , drop = FALSE]) %*%
+              matrix(1, ncol = 1)
+          c(t[1], return_vec)
+        }
       }
     } else if (smoothing_method == "gp") {
       # invisible(
@@ -719,7 +734,12 @@ merge_spline_coefs <- function(pme_list, d, time_points, template) {
 
   params <- purrr::reduce(pme_list$params, rbind)
   length_param <- ceiling(max(pme_list$num_clusters)^(1 / d))
-  params <- gen_parameterization(params, ceiling(max(pme_list$num_clusters)), d)
+  params <- gen_parameterization(
+    params,
+    ceiling(max(pme_list$num_clusters)),
+    d,
+    template
+  )
   n_knots <- nrow(params)
   times <- purrr::reduce(pme_list$times, rbind)
 
@@ -739,9 +759,10 @@ merge_spline_coefs <- function(pme_list, d, time_points, template) {
       R <- cbind(rep(1, n_knots), params)
       E <- calcE(params, 4 - d)
     } else if (template == "sphere") {
+      params_cart <- pracma::sph2cart(cbind(params, 1))
       R <- rep(1, nrow(params)) |>
         matrix(ncol = 1)
-      E <- assist::sphere(params)
+      E <- calcE_sphere(params_cart)
     }
 
     spline_coefs[[time_idx]] <- solve_spline(
@@ -922,12 +943,14 @@ update_parameterization <- function(
 ) {
   full_r <- tidyr::expand_grid(time_points, r) %>%
     as.matrix(ncol = d + 1)
+
   new_param <- purrr::map(
     1:nrow(X),
     ~ projection_lpme(X[.x, ], f, full_r[.x, ], n_knots, d2, gamma)
   ) %>%
     purrr::reduce(cbind) %>%
     t()
+
   X_update <- purrr::map(1:nrow(full_r), ~ f(full_r[.x, ])) %>%
     purrr::reduce(rbind)
 
@@ -971,7 +994,7 @@ calc_mse_cv <- function(
     folds <- sample(1:k, length(time_points), replace = TRUE)
   }
   cv_mse <- vector()
-  r_mat <- gen_parameterization(r, n_knots, d)
+  r_mat <- gen_parameterization(r, n_knots, d, template)
 
   for (fold_idx in 1:k) {
     fold_times <- time_points[folds != fold_idx]
@@ -987,9 +1010,10 @@ calc_mse_cv <- function(
         R <- cbind(rep(1, n_knots), r_mat)
         E <- calcE(r_mat, gamma)
       } else if (template == "sphere") {
+        r_mat_cart <- pracma::sph2cart(cbind(r_mat, 1))
         R <- rep(1, n_knots) |>
           matrix(ncol = 1)
-        E <- assist::sphere(r_mat)
+        E <- calcE_sphere(r_mat_cart)
       }
 
       spline_coefs[[idx]] <- solve_spline(
@@ -1037,21 +1061,35 @@ calc_mse_cv <- function(
         return_vec
       }
 
-      f_new_cv <- function(t) {
-        coefs <- f_coef_cv(t[1])
-        coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+      if (template == "euclidean") {
+        f_new_cv <- function(t) {
+          coefs <- f_coef_cv(t[1])
+          coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
 
-        if (template == "euclidean") {
           kernel_vals <- etaFunc(t[-1], r_initial, gamma)
-        } else if (template == "sphere") {
-          kernel_vals <- assist::sphere(rbind(t[-1], r_initial))[1, -1]
-        }
 
-        return_vec <- t(coef_mat[1:n_knots, ]) %*%
-          kernel_vals +
-          t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
-            matrix(c(1, t[-1]), ncol = 1)
-        return(c(t[1], return_vec))
+          return_vec <- t(coef_mat[1:n_knots, ]) %*%
+            kernel_vals +
+            t(coef_mat[(n_knots + 1):(n_knots + d + 1), ]) %*%
+              matrix(c(1, t[-1]), ncol = 1)
+          return(c(t[1], return_vec))
+        }
+      } else if (template == "sphere") {
+        f_new_cv <- function(t) {
+          coefs <- f_coef_cv(t[1])
+          coef_mat <- matrix(coefs, n_knots + d + 1, byrow = TRUE)
+
+          param_vec_cart <- pracma::sph2cart(c(t[-1], 1))
+          params_cart <- pracma::sph2cart(cbind(r_initial, 1))
+
+          kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+          return_vec <- t(coef_mat[1:n_knots, ]) %*%
+            kernel_vals +
+            t(coef_mat[n_knots + 1, , drop = FALSE]) %*%
+              matrix(1, ncol = 1)
+          return(c(t[1], return_vec))
+        }
       }
     } else if (smoothing_method == "gp") {
       # invisible(
@@ -1103,17 +1141,21 @@ calc_mse_cv <- function(
   cv_mse
 }
 
-gen_parameterization <- function(r, n_knots, d) {
-  r_bounds <- Rfast::colMinsMaxs(r)
-  r_list <- list()
-  for (idx in 1:dim(r_bounds)[2]) {
-    r_list[[idx]] <- seq(
-      r_bounds[1, idx],
-      r_bounds[2, idx],
-      length.out = n_knots^(1 / d)
-    )
+gen_parameterization <- function(r, n_knots, d, template) {
+  if (template == "euclidean") {
+    r_bounds <- Rfast::colMinsMaxs(r)
+    r_list <- list()
+    for (idx in 1:dim(r_bounds)[2]) {
+      r_list[[idx]] <- seq(
+        r_bounds[1, idx],
+        r_bounds[2, idx],
+        length.out = n_knots^(1 / d)
+      )
+    }
+    r_mat <- as.matrix(expand.grid(r_list))
+  } else if (template == "sphere") {
+    r_mat <- fibonacci_sphere(n_knots)
   }
-  r_mat <- as.matrix(expand.grid(r_list))
   r_mat
 }
 

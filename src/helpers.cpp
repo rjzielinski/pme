@@ -159,30 +159,6 @@ double eta_kernel(const arma::vec& t, int lambda) {
   return std::pow(norm_val, lambda);
 }
 
-//' Documentation Still Needed
-//'
-//' This is a function that still needs to be documented properly.
-//'
-//' @param t Numeric vector of values.
-//' @param lambda Number of dimensions.
-//'
-//' @return A numeric value.
-// [[Rcpp::export]]
-double eta_kernel_old(arma::vec t, int lambda) {
-  double lambda_num = lambda / 1.0;
-  double norm_val = norm_euclidean(t);
-  double y;
-  if (lambda % 2 == 0) {
-    if (norm_val == 0) {
-      y = 0;
-    } else {
-      y = pow(norm_val, lambda_num) * log(norm_val);
-    }
-  } else {
-    y = pow(norm_val, lambda_num);
-  }
-  return y;
-}
 
 
 //' Documentation Still Needed
@@ -244,6 +220,135 @@ arma::vec etaFunc(const arma::vec& t, const arma::mat& tau, int lambda) {
 }
 
 
+//' Compute the Quadratic Functional for Spherical Kernel
+//'
+//' Closed-form solutions are given in Wahba (1981) Table 1
+//'
+//' @param z Cosine of angle between two vectors
+//' @param m Order of the spline function
+//'
+//' @return A numeric value.
+// [[Rcpp::export]]
+double sphere_q(double z, int m) {
+  double w, a, c, q;
+
+  if (z > 0.99999) {
+    return 0.5;
+  } 
+
+  w = (1.0 - z) * 0.5;
+  double sqrt_w = std::sqrt(w);
+  c = 2 * sqrt_w;
+  a = std::log(1.0 + (1.0 / sqrt_w));
+
+  // if (m == 2) {
+  q = (a * ((12.0 * w * w) - (4.0 * w)) - (6.0 * c * w) + (6.0 * w) + 1.0) * 0.5;
+  // }
+
+    return q;
+}
+
+//' Compute spherical kernel
+//'
+//' @param x Vector 1, expressed in cartesian coordinates
+//' @param y Vector 2, expressed in cartesian coordinates
+//' @param m Order of the spline function
+//'
+//' @return A numeric value.
+// [[Rcpp::export]]
+double sphere_kernel(arma::vec x, arma::vec y, int m) {
+
+
+  double cos_gamma = arma::norm_dot(x, y);
+  double val = sphere_q(cos_gamma, m) - (1.0 / (2.0 * m - 1.0));
+
+  return val;
+}
+
+//' Compute spherical kernel values for single observation
+//'
+//' @param t A numeric vector of values.
+//' @param tau A numeric matrix of values.
+//' @param m Spline order.
+//'
+//' @return A numeric matrix.
+//' @export
+//'
+// [[Rcpp::export]]
+arma::vec sphere_kernel_func(const arma::vec& t, const arma::mat& tau, int m = 2) {
+
+  int nrow = tau.n_rows;
+  double kernel_offset = 1.0 / (2.0 * m - 1.0);
+
+  arma::vec cos_gammas = tau * t; 
+  arma::vec kernel_vals(nrow);
+
+  for (int i = 0; i < nrow; ++i) {
+    kernel_vals(i) = sphere_q(cos_gammas(i), m) - kernel_offset;
+  }
+  return kernel_vals;
+}
+
+//' Compute E matrix using spherical kernel
+//'
+//' @param x Numeric matrix of values.
+//' @param m Spline order.
+//'
+//' @return A numeric matrix.
+//' @export
+//'
+// [[Rcpp::export]]
+arma::mat calcE_sphere(const arma::mat& x, int m = 2) {
+  int nrow = x.n_rows;
+  double kernel_offset = 1.0 / (2.0 * m - 1.0);
+
+  arma::mat E(nrow, nrow, arma::fill::none);
+
+  arma::mat cos_gammas = x * x.t();
+
+  // armadillo uses column-major memory
+  arma::mat x_t = x.t();
+
+  for (int i = 0; i < nrow; ++i) {
+
+    E(i, i) = sphere_q(cos_gammas(i, i), m) - kernel_offset;
+
+    // E matrix is symmetric, so only calculate off-diagonal elements once
+    for (int j = i + 1; j < nrow; ++j) {
+      double kernel_val = sphere_q(cos_gammas(i, j), m) - kernel_offset;
+
+      E(i, j) = kernel_val;
+      E(j, i) = kernel_val;
+    }
+  }
+  return E;
+}
+
+
+//' Documentation Still Needed
+//'
+//' This is a function that still needs to be documented properly.
+//'
+//' @param t Numeric vector of values.
+//' @param lambda Number of dimensions.
+//'
+//' @return A numeric value.
+// [[Rcpp::export]]
+double eta_kernel_old(arma::vec t, int lambda) {
+  double lambda_num = lambda / 1.0;
+  double norm_val = norm_euclidean(t);
+  double y;
+  if (lambda % 2 == 0) {
+    if (norm_val == 0) {
+      y = 0;
+    } else {
+      y = pow(norm_val, lambda_num) * log(norm_val);
+    }
+  } else {
+    y = pow(norm_val, lambda_num);
+  }
+  return y;
+}
 
 //' Documentation Still Needed
 //'

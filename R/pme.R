@@ -4,6 +4,7 @@
 #'
 #' @param data A numeric matrix of high-dimensional data.
 #' @param d A positive integer representing the intrinsic dimension.
+#' @param template The template manifold to use for estimation: euclidean or sphere.
 #' @param initialization A list of values providing an initialization for `pme()`. It is not recommended to supply these values manually.
 #' @param initialization_algorithm The name of a manifold learning algorithm to use for finding the initial parameterizations. Options include "isomap", "diffusion_maps", and "laplacian_eigenmaps".
 #' @param initialization_type Choose whether to use cluster centers or represent clusters by subsampling from the associated points. Options: "centers" or "subsample".
@@ -100,23 +101,34 @@ pme <- function(
     )
 
     params <- initialization$parameterization
+    params_cart <- pracma::sph2cart(cbind(params, 1))
 
-    f_embedding <- function(parameters) {
-      if (template == "euclidean") {
+    if (template == "euclidean") {
+      f_embedding <- function(parameters) {
         kernel_vals <- etaFunc(parameters, params, 4 - d)
-      } else if (template == "sphere") {
-        kernel_vals <- assist::sphere(rbind(parameters, params))[1, -1]
+        as.vector(
+          (t(spline_coefs[1:I, ]) %*% kernel_vals) +
+            (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
+              matrix(c(1, parameters), ncol = 1))
+        )
       }
-      as.vector(
-        (t(spline_coefs[1:I, ]) %*% kernel_vals) +
-          (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
-            matrix(c(1, parameters), ncol = 1))
-      )
+    } else if (template == "sphere") {
+      f_embedding <- function(parameters) {
+        param_vec_cart <- pracma::sph2cart(c(parameters, 1))
+        kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+        as.vector(
+          (t(spline_coefs[1:I, ]) %*% kernel_vals) +
+            (t(spline_coefs[I + 1, , drop = FALSE]) %*%
+              matrix(1, ncol = 1))
+        )
+      }
     }
 
     f0 <- f_embedding
 
     params <- calc_params(f_embedding, X, params)
+    params_cart <- pracma::sph2cart(cbind(params, 1))
 
     SSD <- calc_SSD(f_embedding, X, params)
 
@@ -145,20 +157,30 @@ pme <- function(
         template
       )
 
-      f_embedding <- function(parameters) {
-        if (template == "euclidean") {
+      if (template == "euclidean") {
+        f_embedding <- function(parameters) {
           kernel_vals <- etaFunc(parameters, params, 4 - d)
-        } else if (template == "sphere") {
-          kernel_vals <- assist::sphere(rbind(parameters, params))[1, -1]
+          as.vector(
+            (t(spline_coefs[1:I, ]) %*% kernel_vals) +
+              (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
+                matrix(c(1, parameters), ncol = 1))
+          )
         }
-        as.vector(
-          (t(spline_coefs[1:I, ]) %*% kernel_vals) +
-            (t(spline_coefs[(I + 1):(I + d + 1), ]) %*%
-              matrix(c(1, parameters), ncol = 1))
-        )
+      } else if (template == "sphere") {
+        f_embedding <- function(parameters) {
+          param_vec_cart <- pracma::sph2cart(c(parameters, 1))
+          kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+          as.vector(
+            (t(spline_coefs[1:I, ]) %*% kernel_vals) +
+              (t(spline_coefs[I + 1, , drop = FALSE]) %*%
+                matrix(1, ncol = 1))
+          )
+        }
       }
 
       params <- calc_params(f_embedding, X, params)
+      params_cart <- pracma::sph2cart(cbind(params, 1))
 
       SSD <- calc_SSD(f_embedding, X, params)
 
@@ -204,25 +226,37 @@ pme <- function(
     }
     coefs[[tuning_idx]] <- spline_coefs
     parameterization[[tuning_idx]] <- params
-    embeddings[[tuning_idx]] <- function(parameters) {
-      if (template == "euclidean") {
+
+    if (template == "euclidean") {
+      embeddings[[tuning_idx]] <- function(parameters) {
         kernel_vals <- etaFunc(
           parameters,
           parameterization[[tuning_idx]],
           4 - d
         )
-      } else if (template == "sphere") {
-        kernel_vals <- assist::sphere(rbind(
-          parameters,
-          parameterization[[tuning_idx]],
-          4 - d
-        ))[1, -1]
+
+        as.vector(
+          (t(coefs[[tuning_idx]][1:I, ]) %*% kernel_vals) +
+            (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*%
+              matrix(c(1, parameters), ncol = 1))
+        )
       }
-      as.vector(
-        (t(coefs[[tuning_idx]][1:I, ]) %*% kernel_vals) +
-          (t(coefs[[tuning_idx]][(I + 1):(I + d + 1), ]) %*%
-            matrix(c(1, parameters), ncol = 1))
-      )
+    } else if (template == "sphere") {
+      embeddings[[tuning_idx]] <- function(parameters) {
+        param_vec_cart <- pracma::sph2cart(c(parameters, 1))
+        params_cart <- pracma::sph2cart(cbind(
+          parameterization[[tuning_idx]],
+          1
+        ))
+
+        kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+        as.vector(
+          (t(coefs[[tuning_idx]][1:I, ]) %*% kernel_vals) +
+            (t(coefs[[tuning_idx]][I + 1, , drop = FALSE]) %*%
+              matrix(1, ncol = 1))
+        )
+      }
     }
 
     if (tuning_idx >= 4) {
@@ -235,17 +269,29 @@ pme <- function(
   optimal_idx <- min(which(mse == min(mse)))
   coefs_opt <- coefs[[optimal_idx]]
   params_opt <- parameterization[[optimal_idx]]
-  embedding_opt <- function(parameters) {
-    if (template == "euclidean") {
+
+  if (template == "euclidean") {
+    embedding_opt <- function(parameters) {
       kernel_vals <- etaFunc(parameters, params_opt, 4 - d)
-    } else if (template == "sphere") {
-      kernel_vals <- assist::sphere(rbind(parameters, params_opt))[1, -1]
+
+      as.vector(
+        (t(coefs_opt[1:I, ]) %*% kernel_vals) +
+          (t(coefs_opt[(I + 1):(I + d + 1), ]) %*%
+            matrix(c(1, parameters), ncol = 1))
+      )
     }
-    as.vector(
-      (t(coefs_opt[1:I, ]) %*% kernel_vals) +
-        (t(coefs_opt[(I + 1):(I + d + 1), ]) %*%
-          matrix(c(1, parameters), ncol = 1))
-    )
+  } else if (template == "sphere") {
+    embedding_opt <- function(parameters) {
+      param_vec_cart <- pracma::sph2cart(c(parameters, 1))
+      params_cart <- pracma::sph2cart(cbind(params_opt, 1))
+      kernel_vals <- sphere_kernel_func(param_vec_cart, params_cart)
+
+      as.vector(
+        (t(coefs_opt[1:I, ]) %*% kernel_vals) +
+          (t(coefs_opt[I + 1, , drop = FALSE]) %*%
+            matrix(1, ncol = 1))
+      )
+    }
   }
 
   if (verbose == TRUE) {
@@ -359,10 +405,13 @@ is_pme <- function(x) {
 #' @param min_clusters The minimum number of mixture components.
 #' @param alpha Significance level.
 #' @param max_clusters Maximum number of components.
+#' @param component_type Whether to represent clusters using centers or subsampled points: centers or subsample.
+#' @param algorithm The manifold learning algorithm to use for initial parameterization.
+#' @param subsample_size If component_type is "subsample", the number of points to include.
+#' @param template The template manifold to use.
 #'
 #' @return A list used to initialize PME.
 #'
-#' @noRd
 #' @export
 initialize_pme <- function(
   x,
@@ -525,9 +574,10 @@ calc_coefficients <- function(X, t, weights, w, template) {
     t_val <- cbind(rep(1, nrow(t)), t)
     E <- calcE(t, 4 - ncol(t))
   } else if (template == "sphere") {
+    t_cart <- pracma::sph2cart(cbind(t, 1))
     t_val <- rep(1, nrow(t)) |>
       matrix(ncol = 1)
-    E <- assist::sphere(t)
+    E <- calcE_sphere(t_cart)
   }
   solve_weighted_spline(E, weights, t_val, X, w, ncol(t), ncol(X))
 }
@@ -548,6 +598,7 @@ calc_params <- function(f, X, init_params) {
   ) %>%
     unlist() %>%
     matrix(nrow = nrow(X), byrow = TRUE)
+
   params
 }
 

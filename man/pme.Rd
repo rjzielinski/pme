@@ -27,6 +27,8 @@ pme(
 
 \item{d}{A positive integer representing the intrinsic dimension.}
 
+\item{template}{The template manifold to use for estimation: euclidean or sphere.}
+
 \item{initialization}{A list of values providing an initialization for \code{pme()}. It is not recommended to supply these values manually.}
 
 \item{initialization_algorithm}{The name of a manifold learning algorithm to use for finding the initial parameterizations. Options include "isomap", "diffusion_maps", and "laplacian_eigenmaps".}

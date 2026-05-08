@@ -99,18 +99,6 @@ eta_kernel <- function(t, lambda) {
 #'
 #' This is a function that still needs to be documented properly.
 #'
-#' @param t Numeric vector of values.
-#' @param lambda Number of dimensions.
-#'
-#' @return A numeric value.
-eta_kernel_old <- function(t, lambda) {
-    .Call(`_pme_eta_kernel_old`, t, lambda)
-}
-
-#' Documentation Still Needed
-#'
-#' This is a function that still needs to be documented properly.
-#'
 #' @param x Numeric matrix of values.
 #' @param lambda Number of dimensions.
 #'
@@ -134,6 +122,66 @@ calcE <- function(x, lambda) {
 #'
 etaFunc <- function(t, tau, lambda) {
     .Call(`_pme_etaFunc`, t, tau, lambda)
+}
+
+#' Compute the Quadratic Functional for Spherical Kernel
+#'
+#' Closed-form solutions are given in Wahba (1981) Table 1
+#'
+#' @param z Cosine of angle between two vectors
+#' @param m Order of the spline function
+#'
+#' @return A numeric value.
+sphere_q <- function(z, m) {
+    .Call(`_pme_sphere_q`, z, m)
+}
+
+#' Compute spherical kernel
+#'
+#' @param x Vector 1, expressed in cartesian coordinates
+#' @param y Vector 2, expressed in cartesian coordinates
+#' @param m Order of the spline function
+#'
+#' @return A numeric value.
+sphere_kernel <- function(x, y, m) {
+    .Call(`_pme_sphere_kernel`, x, y, m)
+}
+
+#' Compute spherical kernel values for single observation
+#'
+#' @param t A numeric vector of values.
+#' @param tau A numeric matrix of values.
+#' @param m Spline order.
+#'
+#' @return A numeric matrix.
+#' @export
+#'
+sphere_kernel_func <- function(t, tau, m = 2L) {
+    .Call(`_pme_sphere_kernel_func`, t, tau, m)
+}
+
+#' Compute E matrix using spherical kernel
+#'
+#' @param x Numeric matrix of values.
+#' @param m Spline order.
+#'
+#' @return A numeric matrix.
+#' @export
+#'
+calcE_sphere <- function(x, m = 2L) {
+    .Call(`_pme_calcE_sphere`, x, m)
+}
+
+#' Documentation Still Needed
+#'
+#' This is a function that still needs to be documented properly.
+#'
+#' @param t Numeric vector of values.
+#' @param lambda Number of dimensions.
+#'
+#' @return A numeric value.
+eta_kernel_old <- function(t, lambda) {
+    .Call(`_pme_eta_kernel_old`, t, lambda)
 }
 
 #' Documentation Still Needed

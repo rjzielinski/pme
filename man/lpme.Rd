@@ -30,6 +30,8 @@ lpme(
 
 \item{d}{The intrinsic dimension of the data.}
 
+\item{template}{The template manifold to be used in fitting: euclidean or sphere.}
+
 \item{smoothing_method}{The approach taken to smoothing over PME coefficients.}
 
 \item{gamma}{A vector of numeric smoothing parameter values.}
