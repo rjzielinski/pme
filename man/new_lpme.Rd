@@ -20,7 +20,8 @@ new_lpme(
   coefficient_functions,
   parameterization_list,
   smoothing_method,
-  initialization_algorithm
+  initialization_algorithm,
+  template
 )
 }
 \arguments{
@@ -55,6 +56,8 @@ new_lpme(
 \item{smoothing_method}{Choose between smoothing by "spline" or "gp".}
 
 \item{initialization_algorithm}{The algorithm that was used to identify the initial parameter values.}
+
+\item{template}{The template manifold used in the LPME algorithm: euclidean or sphere.}
 }
 \value{
 An object with class "lpme".
