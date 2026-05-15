@@ -192,7 +192,10 @@ lpme <- function(
   I_new <- n
   t_initial <- params %>%
     as.matrix()
-  params_cart <- pracma::sph2cart(cbind(t_initial, 1))
+
+  if (template == "sphere") {
+    params_cart <- pracma::sph2cart(cbind(t_initial, 1))
+  }
 
   MSE_seq_new <- vector()
   SOL_coef <- list()

@@ -86,6 +86,13 @@ pme <- function(
   X <- initialization$centers
   I <- length(initialization$theta_hat)
 
+  params <- initialization$parameterization |>
+    matrix(nrow = nrow(X))
+
+  if (template == "sphere") {
+    params_cart <- pracma::sph2cart(cbind(params, 1))
+  }
+
   mse <- vector()
   coefs <- list()
   parameterization <- list()
@@ -94,14 +101,11 @@ pme <- function(
   for (tuning_idx in 1:length(lambda)) {
     spline_coefs <- calc_coefficients(
       X,
-      initialization$parameterization,
+      params,
       weights,
       lambda[tuning_idx],
       template
     )
-
-    params <- initialization$parameterization
-    params_cart <- pracma::sph2cart(cbind(params, 1))
 
     if (template == "euclidean") {
       f_embedding <- function(parameters) {
@@ -128,7 +132,9 @@ pme <- function(
     f0 <- f_embedding
 
     params <- calc_params(f_embedding, X, params)
-    params_cart <- pracma::sph2cart(cbind(params, 1))
+    if (template == "sphere") {
+      params_cart <- pracma::sph2cart(cbind(params, 1))
+    }
 
     SSD <- calc_SSD(f_embedding, X, params)
 
@@ -180,7 +186,9 @@ pme <- function(
       }
 
       params <- calc_params(f_embedding, X, params)
-      params_cart <- pracma::sph2cart(cbind(params, 1))
+      if (template == "sphere") {
+        params_cart <- pracma::sph2cart(cbind(params, 1))
+      }
 
       SSD <- calc_SSD(f_embedding, X, params)
 
